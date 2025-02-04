@@ -17,21 +17,33 @@
 
 
 namespace HeatFix {
+	using namespace std;
+#if _DEBUG
+	using namespace std::chrono;
+	static const auto tz = current_zone();
+	static std::ofstream ofs1, ofs2;
+#endif // _DEBUG
 	static void(*origHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
-	//static void(*newHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
 	static int counter = 0;
 
-	static std::ofstream ofs;
-
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
-		if (!ofs.is_open()) {
-			ofs = std::ofstream("Heatfix.txt", std::ios::out | std::ios::trunc | std::ios::binary);
+#if _DEBUG
+		if (!ofs1.is_open()) {
+			ofs1 = ofstream("Heatfix_Debug1.txt", ios::out | ios::trunc | ios::binary);
 		}
-
-		ofs << "PatchedHeatFunc" << std::endl;
+		if (!ofs2.is_open()) {
+			ofs2 = ofstream("Heatfix_Debug2.txt", ios::out | ios::trunc | ios::binary);
+		}
+		const auto utcNow = system_clock::now();
+		const auto tzNow = tz->to_local(utcNow);
+		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
+		ofs1 << "PatchedHeatFunc: " << str_TzNow << endl;
+#endif // _DEBUG
 		if (counter % 2 == 0) {
 			counter = 0;
-			ofs << "OrigHeatFunc" << std::endl;
+#if _DEBUG
+			ofs2 << "OrigHeatFunc: " << str_TzNow << endl;
+#endif // _DEBUG
 			origHeatFunc(param1, param2, param3, param4);
 		}
 		counter++;
@@ -41,11 +53,11 @@ namespace HeatFix {
 
 void OnInitializeHook()
 {
-	std::unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule( GetModuleHandle( nullptr ), ".text" );
+	std::unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 
+	using namespace std;
 	using namespace Memory;
 	using namespace hook;
-
 
 	{
 		using namespace HeatFix;
@@ -73,16 +85,16 @@ void OnInitializeHook()
 	// log current time to file to get some feedback once hook is done
 	{
 		using namespace std::chrono;
-		const auto t1 = system_clock::now();
-		const auto s1 = std::format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(t1));
+		const auto utcNow = system_clock::now();
+		const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
 		// to local time, ref: https://akrzemi1.wordpress.com/2022/04/24/local-time/
 		const auto tz = current_zone();
-		const auto t2 = tz->to_local(t1);
-		const auto s2 = std::format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(t2));
-		auto ofs = std::ofstream("SilentPatchYRC.txt", std::ios::binary | std::ios::trunc | std::ios::out);
-		ofs << "Hook done!" << std::endl;
-		ofs << "Local: " << s2 << std::endl;
-		ofs << "UTC:   " << s1 << std::endl;
+		const auto tzNow = tz->to_local(utcNow);
+		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+		auto ofs = std::ofstream("Heatfix.txt", ios::binary | ios::trunc | ios::out);
+		ofs << "Hook done!" << endl;
+		ofs << "Local: " << tzNow << endl;
+		ofs << "UTC:   " << utcNow << endl;
 		ofs.close();
 	}
 }
