@@ -5,6 +5,7 @@
 #define _WIN32_WINNT 0x0601
 
 #include <chrono>
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <windows.h>
@@ -38,10 +39,10 @@ namespace HeatFix {
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		if (s_Debug) {
 			if (!ofs1.is_open()) {
-				ofs1 = ofstream("Heatfix_Debug1.txt", ios::out | ios::trunc | ios::binary);
+				ofs1 = ofstream("Yakuza3HeatFix_Debug1.txt", ios::out | ios::trunc | ios::binary);
 			}
 			if (!ofs2.is_open()) {
-				ofs2 = ofstream("Heatfix_Debug2.txt", ios::out | ios::trunc | ios::binary);
+				ofs2 = ofstream("Yakuza3HeatFix_Debug2.txt", ios::out | ios::trunc | ios::binary);
 			}
 			const auto utcNow = system_clock::now();
 			const auto tzNow = tz->to_local(utcNow);
@@ -80,7 +81,27 @@ void OnInitializeHook()
 	using namespace hook;
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
-	ofstream ofs = ofstream("Heatfix.txt", ios::binary | ios::trunc | ios::out);
+	ofstream ofs = ofstream("Yakuza3HeatFix.txt", ios::binary | ios::trunc | ios::out);
+	{
+		namespace fs = std::filesystem;
+		fs::path manualDisable1("Yakuza3HeatFix.Disable");
+		fs::path manualDisable2("Yakuza3HeatFix.disable");
+		fs::path manualDisable3("Yakuza3HeatFix.Disable.txt");
+		fs::path manualDisable4("Yakuza3HeatFix.disable.txt");
+		if (fs::exists(manualDisable1) || fs::exists(manualDisable2) || fs::exists(manualDisable3) || fs::exists(manualDisable4)) {
+			using namespace std::chrono;
+
+			const auto utcNow = system_clock::now();
+			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
+			const auto tzNow = HeatFix::tz->to_local(utcNow);
+			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+			ofs << "HeatFix was disabled!" << endl;
+			ofs << "Local: " << str_TzNow << endl;
+			ofs << "UTC:   " << str_UtcNow << endl;
+			return;
+		}
+	}
+
 	{
 		using namespace HeatFix;
 		/*
@@ -107,12 +128,10 @@ void OnInitializeHook()
 
 		const auto utcNow = system_clock::now();
 		const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-		// to local time, ref: https://akrzemi1.wordpress.com/2022/04/24/local-time/
 		const auto tzNow = HeatFix::tz->to_local(utcNow);
 		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
 		ofs << "Hook done!" << endl;
 		ofs << "Local: " << str_TzNow << endl;
 		ofs << "UTC:   " << str_UtcNow << endl;
 	}
-	ofs.close();
 }
