@@ -1,0 +1,42 @@
+relevant section used for hook: 
+
+                             **************************************************************
+                             *                          FUNCTION                          *
+                             **************************************************************
+                             undefined __fastcall Calls_UpdateHeat_7ff6565d8b70(char 
+             undefined         AL:1           <RETURN>
+             char * *          RCX:8          param_1
+             undefined8        RDX:8          param_2
+             undefined8        R8:8           param_3
+             undefined[16] *   R9:8           param_4
+             undefined1[16]    Stack[-0x18]   local_18                                XREF[2]:     7ff6565d8c0e(W), 
+                                                                                                   7ff6565d8c30(R)  
+             undefined1[16]    Stack[-0x28]   local_28                                XREF[2]:     7ff6565d8b76(W), 
+                                                                                                   7ff6565d8caf(R)  
+             undefined1        Stack[-0x38]:1 local_38                                XREF[1]:     7ff6565d8c09(*)  
+                             Calls_UpdateHeat_7ff6565d8b70                   XREF[4]:     7ff656e31508(*), 7ff65706dcbc(*), 
+                                                                                          7ff65706dccc(*), 7ff658d859b8(*)  
+    7ff6565d8b70 40 53           PUSH       RBX
+    7ff6565d8b72 48 83 ec 50     SUB        RSP,0x50
+    7ff6565d8b76 c5 f8 29        VMOVAPS    xmmword ptr [RSP + local_28[0]],XMM7
+                 7c 24 30
+    7ff6565d8b7c 48 8b d9        MOV        RBX,param_1
+    7ff6565d8b7f e8 8c 1f        CALL       FUN_7ff6565dab10                                 undefined FUN_7ff6565dab10(longl
+                 00 00
+    7ff6565d8b84 48 8b cb        MOV        param_1,RBX
+    7ff6565d8b87 e8 34 24        CALL       UpdateHeat_7ff6565dafc0                          undefined UpdateHeat_7ff6565dafc
+                 00 00
+    7ff6565d8b8c 48 8b 83        MOV        RAX,qword ptr [RBX + 0x13d0]
+                 d0 13 00 00
+    7ff6565d8b93 f7 80 54        TEST       dword ptr [RAX + 0x354],0x4000000
+                 03 00 00 
+                 00 00 00 04
+    7ff6565d8b9d 75 15           JNZ        LAB_7ff6565d8bb4
+    7ff6565d8b9f 48 8b 05        MOV        RAX,qword ptr [DAT_7ff6573ccde8]                 = 00007FF499266880h
+                 42 42 df 00
+    7ff6565d8ba6 83 78 08 00     CMP        dword ptr [RAX + 0x8]=>DAT_7ff499266888,0x0
+    7ff6565d8baa 75 08           JNZ        LAB_7ff6565d8bb4
+    7ff6565d8bac 48 8b cb        MOV        param_1,RBX
+    7ff6565d8baf e8 cc 20        CALL       FUN_7ff6565dac80                                 undefined FUN_7ff6565dac80(longl
+                 00 00
+

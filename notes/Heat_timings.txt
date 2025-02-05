@@ -1,7 +1,7 @@
 Time 1: From closing the menu to start of Heat drain
 Time 2: From start of Heat drain to end of Heat mode
 
-Keep in mind that these timings are bound to be a little inaccurate since some animation times might not match perfectly between PS3 and PC and I got these times by counting the frames myself. But for the sake of comparison these are good enough. Also - the recorded videos won't be pushed to Github.
+Keep in mind that these timings are bound to be a little inaccurate since some animation times might not match perfectly between PS3 and PC and I got these times by counting the frames myself. But for the sake of comparison these are good enough. Also - the recorded videos won't get pushed to Github.
 
 PS3 - Frame 726-987 (261 frames, 4.350 seconds), Frame 987-1762 (775 frames, 12.917 seconds)
 
