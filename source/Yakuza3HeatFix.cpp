@@ -35,6 +35,7 @@ namespace HeatFix {
 	*/
 	static void(*origHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
 	static int counter = 0;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		if (s_Debug) {
@@ -47,9 +48,9 @@ namespace HeatFix {
 			const auto utcNow = system_clock::now();
 			const auto tzNow = tz->to_local(utcNow);
 			const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-			ofs1 << "PatchedHeatFunc: " << str_TzNow << endl;
+			ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << endl;
 			if (counter % 2 == 0) {
-				ofs2 << "OrigHeatFunc: " << str_TzNow << endl;
+				ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << endl;
 			}
 		}
 		/*
@@ -58,12 +59,12 @@ namespace HeatFix {
 		* While "remastering" Y3, the HeatUpdate function (along with many other functions) wasn't rewritten
 		* to take 60 updates per second into account. This leads to at least 2 issues in regards to the Heat bar:
 		* - Heat value starts to drop too soon (should start after ~4 seconds but instead starts after ~2 seconds in the "Remaster")
-		* - When Heat starts dropping, the drain rate is too fast when compared to the PS3 version.
+		* - After the Heat value starts dropping, the drain rate is too fast (~2x) when compared to the PS3 version.
 		* 
 		* Proper way to fix this would be to rewrite the HeatUpdate function (which is responsible for both of these issues)
 		* to handle 60 updates per second. But that is definitely more work than I'm willing to put in at the moment.
 		* Instead - we'll only run the HeatUpdate function every 2nd time, essentially halving the rate of Heat calculations.
-		* This seems to work fine and the new drain rate looks pretty similar to the PS3 original.
+		* This seems to work fine and the resulting drain rate is almost identical to the PS3 original.
 		*/
 		if (counter % 2 == 0) {
 			counter = 0;
@@ -82,6 +83,7 @@ void OnInitializeHook()
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 	ofstream ofs = ofstream("Yakuza3HeatFix.txt", ios::binary | ios::trunc | ios::out);
+	// Check if patch should be disabled
 	{
 		namespace fs = std::filesystem;
 		fs::path manualDisable1("Yakuza3HeatFix.Disable");
@@ -102,12 +104,15 @@ void OnInitializeHook()
 		}
 	}
 
+	// Hook/Redirect the game's HeatUpdate function to our own function.
+	// As far as I can tell - HeatUpdate is only called while the game is unpaused and the player is in combat.
 	{
 		using namespace HeatFix;
 		/*
 		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00
-		* Pattern works for Steam and GOG versions. Sha1 checksums for binaries:
+		* Pattern works for Steam and GOG versions.
 		* 
+		* Sha1 checksums for binaries:
 		* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
 		* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
 		* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
