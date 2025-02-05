@@ -1,0 +1,2 @@
+After extracting the mod - "Yakuza3HeatFix.asi" should be in the same directory as "Yakuza3.exe" AND "dinput8.dll".
+DON'T put it in your mods directory!
