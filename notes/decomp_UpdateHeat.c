@@ -72,6 +72,9 @@ void UpdateHeat_14043afc0
   uVar8 = IsCombatInactive_14047a330();
                     /* (*param_1 + 0x268)) = IsActorDead(param_1)
                        Checks if the player is dead (0 = alive, 1 = dead) */
+                    /* (*(int *)(DAT_14122cde8 + 8) points to a variable that is == 0 while combat
+                       is ongoing and == 1 when combat is finished (i.e. either the player or all
+                       enemies are knocked out) */
   if (((((*(uint *)(param_1 + 0x27b) & 0x10000) != 0) ||
        (iVar6 = (**(code **)(*param_1 + 0x268))(param_1), iVar6 != 0)) ||
       ((*(uint *)(param_1[0x27a] + 0x354) & 0x4000000) != 0)) || (*(int *)(DAT_14122cde8 + 8) != 0))

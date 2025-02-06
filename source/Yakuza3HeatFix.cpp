@@ -45,10 +45,19 @@ namespace HeatFix {
 	static classFuncType classMethod = nullptr;
 	static classFuncType patternMethod;
 
+	static uintptr_t globalPointer = 0;
+	static uintptr_t globalAddress = 0;
+	static uintptr_t isCombatOver = 0;
+
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		if (classMethod == nullptr) {
 			classMethod = (classFuncType)*(uintptr_t*)(*(uintptr_t*)param1 + 0x268); // this is how the game accesses this function
 		}
+
+		if (globalAddress == 0) {
+			globalAddress = *(uintptr_t *)globalPointer;
+		}
+		isCombatOver = *(uintptr_t *)(globalAddress + 8);
 
 		if (s_Debug) {
 			if (!ofs1.is_open() && !logFailed) {
@@ -73,6 +82,10 @@ namespace HeatFix {
 					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
 				if (classMethod(param1) != 0) {
+					logFailed = !logFailed;
+					logFailed = !logFailed; // just need something to put a breakpoint on
+				}
+				if (isCombatOver != 0) {
 					logFailed = !logFailed;
 					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
@@ -194,6 +207,17 @@ void OnInitializeHook()
 		if (func3.count_hint(1).size() == 1) {
 			auto match = func3.get_one();
 			patternMethod = (classFuncType)match.get<void>();
+		}
+
+		/*
+		* 48 8b 0d ?? ?? ?? ?? 39 41 08 0f 85
+		* Seems to point to a variable that is == 0 while combat is ongoing
+		* and == 1 when combat is finished (i.e. either the player or all enemies are knocked out)
+		*/
+		auto globalVarPattern = pattern("48 8b 0d ? ? ? ? 39 41 08 0f 85");
+		if (globalVarPattern.count_hint(1).size() == 1) {
+			auto match = globalVarPattern.get_one();
+			ReadOffsetValue(match.get<void>(3), globalPointer);
 		}
 	}
 
