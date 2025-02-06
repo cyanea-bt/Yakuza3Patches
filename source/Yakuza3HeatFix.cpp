@@ -36,21 +36,27 @@ namespace HeatFix {
 	static void(*origHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
 	static int counter = 0;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
+	static bool logFailed = false;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		if (s_Debug) {
-			if (!ofs1.is_open()) {
+			if (!ofs1.is_open() && !logFailed) {
 				ofs1 = ofstream("Yakuza3HeatFix_Debug1.txt", ios::out | ios::trunc | ios::binary);
 			}
-			if (!ofs2.is_open()) {
+			if (!ofs2.is_open() && !logFailed) {
 				ofs2 = ofstream("Yakuza3HeatFix_Debug2.txt", ios::out | ios::trunc | ios::binary);
 			}
-			const auto utcNow = system_clock::now();
-			const auto tzNow = tz->to_local(utcNow);
-			const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-			ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << endl;
-			if (counter % 2 == 0) {
-				ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << endl;
+			if (!ofs1.is_open() || !ofs2.is_open()) {
+				logFailed = true; // don't keep on trying to write logs if open failed (e.g. in case of missing write permissions)
+			}
+			else {
+				const auto utcNow = system_clock::now();
+				const auto tzNow = tz->to_local(utcNow);
+				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
+				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << endl;
+				if (counter % 2 == 0) {
+					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << endl;
+				}
 			}
 		}
 		/*
@@ -93,13 +99,15 @@ void OnInitializeHook()
 		if (fs::exists(manualDisable1) || fs::exists(manualDisable2) || fs::exists(manualDisable3) || fs::exists(manualDisable4)) {
 			using namespace std::chrono;
 
-			const auto utcNow = system_clock::now();
-			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-			const auto tzNow = HeatFix::tz->to_local(utcNow);
-			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-			ofs << "HeatFix was disabled!" << endl;
-			ofs << "Local: " << str_TzNow << endl;
-			ofs << "UTC:   " << str_UtcNow << endl;
+			if (ofs.is_open()) {
+				const auto utcNow = system_clock::now();
+				const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
+				const auto tzNow = HeatFix::tz->to_local(utcNow);
+				const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+				ofs << "HeatFix was disabled!" << endl;
+				ofs << "Local: " << str_TzNow << endl;
+				ofs << "UTC:   " << str_UtcNow << endl;
+			}
 			return;
 		}
 	}
@@ -109,7 +117,7 @@ void OnInitializeHook()
 	{
 		using namespace HeatFix;
 		/*
-		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00
+		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00 f7 80 54 03
 		* Pattern works for Steam and GOG versions.
 		* 
 		* Sha1 checksums for binaries:
@@ -117,9 +125,11 @@ void OnInitializeHook()
 		* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
 		* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
 		*/
-		auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00");
+		auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00 f7 80 54 03");
 		if (updateHeat.count_hint(1).size() == 1) {
-			ofs << "Found HeatUpdate pattern!" << endl;
+			if (ofs.is_open()) {
+				ofs << "Found HeatUpdate pattern!" << endl;
+			}
 			auto match = updateHeat.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
 			ReadCall(match.get<void>(), origHeatFunc);
@@ -131,12 +141,14 @@ void OnInitializeHook()
 	{
 		using namespace std::chrono;
 
-		const auto utcNow = system_clock::now();
-		const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-		const auto tzNow = HeatFix::tz->to_local(utcNow);
-		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-		ofs << "Hook done!" << endl;
-		ofs << "Local: " << str_TzNow << endl;
-		ofs << "UTC:   " << str_UtcNow << endl;
+		if (ofs.is_open()) {
+			const auto utcNow = system_clock::now();
+			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
+			const auto tzNow = HeatFix::tz->to_local(utcNow);
+			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+			ofs << "Hook done!" << endl;
+			ofs << "Local: " << str_TzNow << endl;
+			ofs << "UTC:   " << str_UtcNow << endl;
+		}
 	}
 }
