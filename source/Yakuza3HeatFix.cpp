@@ -42,34 +42,24 @@ namespace HeatFix {
 	static uintptr_t(*IsCombatInactive)();
 
 	typedef uint32_t(*IsActorDeadType)(uintptr_t);
-	static IsActorDeadType IsActorDead_byRef = nullptr;
-	static IsActorDeadType IsActorDead_byPattern;
+	static IsActorDeadType IsActorDead = nullptr;
 
 	static uintptr_t globalPointer = 0;
-	static uintptr_t globalAddress = 0;
+	static uintptr_t pIsCombatFinished = 0;
 	static uintptr_t isCombatFinished = 0;
 
 	static uint32_t unknownCondition = 0; // No clue when this one is != 0
 	static uint32_t IsCombatInTransition = 0; // Seems to be != 0 during combat intro or when fading to black after the player dies
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
-		if (IsActorDead_byRef == nullptr) {
-			// MOV  RDX,qword ptr [param_1]
-			// CALL qword ptr [RDX + 0x268]
-			uintptr_t pIsActorDead = *(uintptr_t *)(param1);
-			pIsActorDead = *(uintptr_t *)(pIsActorDead + 0x268);
-			IsActorDead_byRef = (IsActorDeadType)pIsActorDead;
+		// MOV  RDX,qword ptr [param_1]
+		// CALL qword ptr [RDX + 0x268]
+		uintptr_t pIsActorDead = *(uintptr_t *)(param1);
+		pIsActorDead = *(uintptr_t *)(pIsActorDead + 0x268);
+		IsActorDead = (IsActorDeadType)pIsActorDead;
 
-			if (IsActorDead_byRef != IsActorDead_byPattern) {
-				logFailed = !logFailed;
-				logFailed = !logFailed; // just need something to put a breakpoint on
-			}
-		}
-
-		if (globalAddress == 0) {
-			globalAddress = *(uintptr_t *)globalPointer;
-		}
-		isCombatFinished = *(uintptr_t *)(globalAddress + 8);
+		pIsCombatFinished = *(uintptr_t *)globalPointer;
+		isCombatFinished = *(uintptr_t *)(pIsCombatFinished + 8);
 
 		// MOV  RBX,param_1
 		// TEST dword ptr [RBX + 0x13d8],0x10000
@@ -97,50 +87,50 @@ namespace HeatFix {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
 				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << format(" - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - IsActorDead: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
+				const string msg = format(" - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - unknownCondition: {:d} - IsActorDead: {:d} - IsCombatInTransition: {:d} - isCombatFinished: {:d}", 
+					IsPlayerInCombat(), IsCombatInactive(), unknownCondition, IsActorDead(param1), IsCombatInTransition, isCombatFinished);
+				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << msg << endl;
 				if (counter % 2 == 0) {
-					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << format(" - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - IsActorDead: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
-				}
-				if (IsCombatInactive() != 0) {
-					logFailed = !logFailed;
-					logFailed = !logFailed; // just need something to put a breakpoint on
-				}
-				if (IsActorDead_byRef(param1) != 0) {
-					logFailed = !logFailed;
-					logFailed = !logFailed; // just need something to put a breakpoint on
-				}
-				if (isCombatFinished != 0) {
-					logFailed = !logFailed;
-					logFailed = !logFailed; // just need something to put a breakpoint on
-				}
-				if (IsPlayerInCombat() && unknownCondition != 0) {
-					logFailed = !logFailed;
-					logFailed = !logFailed; // just need something to put a breakpoint on
-				}
-				if (IsPlayerInCombat() && IsCombatInTransition != 0) {
-					logFailed = !logFailed;
-					logFailed = !logFailed; // just need something to put a breakpoint on
+					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << msg << endl;
 				}
 			}
 		}
-		/*
-		* Y3 on PS3 runs at 30 fps during gameplay (60 fps in menus, though that hardly matters here).
-		* Y3R always runs its internal logic 60 times per second (even when setting framelimit to 30 fps).
-		* While "remastering" Y3, the HeatUpdate function (along with many other functions) wasn't rewritten
-		* to take 60 updates per second into account. This leads to at least 2 issues in regards to the Heat bar:
-		* - Heat value starts to drop too soon (should start after ~4 seconds but instead starts after ~2 seconds in the "Remaster")
-		* - After the Heat value starts dropping, the drain rate is too fast (~2x) when compared to the PS3 version.
-		* 
-		* Proper way to fix this would be to rewrite the HeatUpdate function (which is responsible for both of these issues)
-		* to handle 60 updates per second. But that is definitely more work than I'm willing to put in at the moment.
-		* Instead - we'll only run the HeatUpdate function every 2nd time, essentially halving the rate of Heat calculations.
-		* This seems to work fine and the resulting drain rate is almost identical to the PS3 original.
-		*/
-		if (counter % 2 == 0) {
+
+		if (!IsPlayerInCombat()) {
 			counter = 0;
+			return; // HeatUpdate() will return immediately in this case, so we just skip calling it
+		}
+		if (IsCombatInactive() || unknownCondition || IsActorDead(param1) || IsCombatInTransition || isCombatFinished) {
+			if (s_Debug) {
+				if (ofs1.is_open()) {
+					ofs1 << "Hit condition for faster HeatUpdate()" << endl;
+				}
+			}
+			counter = 0;
+			// HeatUpdate() won't change the Heat value in these cases, but will still execute some code.
+			// Since I don't know how important that code is, we'll call HeatUpdate() immediately instead of waiting for the next frame/update.
 			origHeatFunc(param1, param2, param3, param4);
 		}
-		counter++;
+		else {
+			/*
+			* Y3 on PS3 runs at 30 fps during gameplay (60 fps in menus, though that hardly matters here).
+			* Y3R always runs its internal logic 60 times per second (even when setting framelimit to 30 fps).
+			* While "remastering" Y3, the HeatUpdate function (along with many other functions) wasn't rewritten
+			* to take 60 updates per second into account. This leads to at least 2 issues in regards to the Heat bar:
+			* - Heat value starts to drop too soon (should start after ~4 seconds but instead starts after ~2 seconds in the "Remaster")
+			* - After the Heat value starts dropping, the drain rate is too fast (~2x) when compared to the PS3 version.
+			* 
+			* Proper way to fix this would be to rewrite the HeatUpdate function (which is responsible for both of these issues)
+			* to handle 60 updates per second. But that is definitely more work than I'm willing to put in at the moment.
+			* Instead - we'll only run the HeatUpdate function every 2nd time, essentially halving the rate of Heat calculations.
+			* This seems to work fine and the resulting drain rate is almost identical to the PS3 original.
+			*/
+			if (counter % 2 == 0) {
+				counter = 0;
+				origHeatFunc(param1, param2, param3, param4);
+			}
+			counter++;
+		}
 	}
 }
 
@@ -183,9 +173,8 @@ void OnInitializeHook()
 		using namespace HeatFix;
 		/*
 		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00 f7 80 54 03
-		* Pattern works for Steam and GOG versions.
 		* 
-		* Sha1 checksums for binaries:
+		* SHA-1 checksums for compatible binaries:
 		* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
 		* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
 		* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
@@ -203,7 +192,6 @@ void OnInitializeHook()
 
 		/*
 		* 48 81 ec c0 00 00 00 48 8b d9 e8 ?? ?? ?? ?? 85 c0
-		* Pattern works for Steam and GOG versions.
 		* 
 		* HeatUpdate() returns right at the start if this function returns 0.
 		* Seems to always return 0, unless the player is in combat.
@@ -219,7 +207,6 @@ void OnInitializeHook()
 
 		/*
 		* e8 ?? ?? ?? ?? f7 83 d8 13 00 00 00 00 01 00
-		* Pattern works for Steam and GOG versions.
 		* 
 		* Most of HeatUpdate()'s code is skipped if this function returns != 0
 		* Seems to return 1 if combat is inactive, e.g. during Heat moves/cutscenes
@@ -234,24 +221,8 @@ void OnInitializeHook()
 		}
 
 		/*
-		* 8b 81 d8 13 00 00 c1 e8 1e 83 e0 01
-		* Pattern works for Steam and GOG versions.
-		* 
-		* Almost all of HeatUpdate()'s code is skipped if this function returns != 0
-		* Seems to return 1 if the player is dead.
-		* Don't necessarily have to get this via pattern, since we can get the address from the player object during HeatUpdate()
-		*/
-		auto actorDead = pattern("8b 81 d8 13 00 00 c1 e8 1e 83 e0 01");
-		if (actorDead.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IsActorDead" << endl;
-			}
-			auto match = actorDead.get_one();
-			IsActorDead_byPattern = (IsActorDeadType)match.get<void>();
-		}
-
-		/*
 		* 48 8b 0d ?? ?? ?? ?? 39 41 08 0f 85
+		* 
 		* Seems to point to a variable that is == 0 while combat is ongoing and == 1
 		* when combat is finished (i.e. either the player or all enemies are knocked out)
 		*/
