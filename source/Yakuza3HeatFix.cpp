@@ -27,6 +27,8 @@ namespace HeatFix {
 	using namespace std::chrono;
 	static const auto tz = current_zone();
 	static ofstream ofs1, ofs2;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
+	static bool logFailed = false;
 
 	/*
 	* Parameter types aren't correct but it shouldn't matter for our purposes.
@@ -35,29 +37,31 @@ namespace HeatFix {
 	*/
 	static void(*origHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
 	static int counter = 0;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
-	static bool logFailed = false;
 
-	static uint32_t(*retIfZero)();
-	static uintptr_t(*shouldBeZero)();
+	static uint32_t(*IsPlayerInCombat)();
+	static uintptr_t(*IsCombatInactive)();
 
-	typedef uint32_t(*classFuncType)(uintptr_t);
-	static classFuncType classMethod = nullptr;
-	static classFuncType patternMethod;
+	typedef uint32_t(*IsActorDeadType)(uintptr_t);
+	static IsActorDeadType IsActorDead_byRef = nullptr;
+	static IsActorDeadType IsActorDead_byPattern;
 
 	static uintptr_t globalPointer = 0;
 	static uintptr_t globalAddress = 0;
-	static uintptr_t isCombatOver = 0;
+	static uintptr_t isCombatFinished = 0;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
-		if (classMethod == nullptr) {
-			classMethod = (classFuncType)*(uintptr_t*)(*(uintptr_t*)param1 + 0x268); // this is how the game accesses this function
+		if (IsActorDead_byRef == nullptr) {
+			IsActorDead_byRef = (IsActorDeadType)*(uintptr_t*)(*(uintptr_t*)param1 + 0x268); // this is how the game accesses this function
+			if (IsActorDead_byRef != IsActorDead_byPattern) {
+				logFailed = !logFailed;
+				logFailed = !logFailed; // just need something to put a breakpoint on
+			}
 		}
 
 		if (globalAddress == 0) {
 			globalAddress = *(uintptr_t *)globalPointer;
 		}
-		isCombatOver = *(uintptr_t *)(globalAddress + 8);
+		isCombatFinished = *(uintptr_t *)(globalAddress + 8);
 
 		if (s_Debug) {
 			if (!ofs1.is_open() && !logFailed) {
@@ -73,19 +77,19 @@ namespace HeatFix {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
 				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << format(" - retIfZero: {:d} - shouldBeZero: {:d} - classMethod: {:d}", retIfZero(), shouldBeZero(), classMethod(param1)) << endl;
+				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << format(" - IsPlayerInCombat: {:d} - shouldBeZero: {:d} - IsActorDead_byRef: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
 				if (counter % 2 == 0) {
-					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << format(" - retIfZero: {:d} - shouldBeZero: {:d} - classMethod: {:d}", retIfZero(), shouldBeZero(), classMethod(param1)) << endl;
+					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << format(" - IsPlayerInCombat: {:d} - shouldBeZero: {:d} - IsActorDead_byRef: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
 				}
-				if (shouldBeZero() != 0) {
+				if (IsCombatInactive() != 0) {
 					logFailed = !logFailed;
 					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
-				if (classMethod(param1) != 0) {
+				if (IsActorDead_byRef(param1) != 0) {
 					logFailed = !logFailed;
 					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
-				if (isCombatOver != 0) {
+				if (isCombatFinished != 0) {
 					logFailed = !logFailed;
 					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
@@ -161,7 +165,7 @@ void OnInitializeHook()
 		auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00 f7 80 54 03");
 		if (updateHeat.count_hint(1).size() == 1) {
 			if (ofs.is_open()) {
-				ofs << "Found HeatUpdate pattern!" << endl;
+				ofs << "Found pattern: HeatUpdate" << endl;
 			}
 			auto match = updateHeat.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
@@ -174,12 +178,15 @@ void OnInitializeHook()
 		* Pattern works for Steam and GOG versions.
 		* 
 		* HeatUpdate() returns right at the start if this function returns 0.
-		* Tests suggest that this always returns 0, unless the player is in combat.
+		* Seems to always return 0, unless the player is in combat.
 		*/
-		auto func1 = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
-		if (func1.count_hint(1).size() == 1) {
-			auto match = func1.get_one();
-			ReadCall(match.get<void>(10), retIfZero);
+		auto playerInCombat = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
+		if (playerInCombat.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: IsPlayerInCombat" << endl;
+			}
+			auto match = playerInCombat.get_one();
+			ReadCall(match.get<void>(10), IsPlayerInCombat);
 		}
 
 		/*
@@ -189,10 +196,13 @@ void OnInitializeHook()
 		* Most of HeatUpdate()'s code is skipped if this function returns != 0
 		* Seems to return 1 if combat is inactive, e.g. during Heat moves/cutscenes
 		*/
-		auto func2 = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");
-		if (func2.count_hint(1).size() == 1) {
-			auto match = func2.get_one();
-			ReadCall(match.get<void>(), shouldBeZero);
+		auto combatInactive = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");
+		if (combatInactive.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: IsCombatInactive" << endl;
+			}
+			auto match = combatInactive.get_one();
+			ReadCall(match.get<void>(), IsCombatInactive);
 		}
 
 		/*
@@ -203,20 +213,26 @@ void OnInitializeHook()
 		* Seems to return 1 if the player is dead.
 		* Don't necessarily have to get this via pattern, since we can get the address from the player object during HeatUpdate()
 		*/
-		auto func3 = pattern("8b 81 d8 13 00 00 c1 e8 1e 83 e0 01");
-		if (func3.count_hint(1).size() == 1) {
-			auto match = func3.get_one();
-			patternMethod = (classFuncType)match.get<void>();
+		auto actorDead = pattern("8b 81 d8 13 00 00 c1 e8 1e 83 e0 01");
+		if (actorDead.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: IsActorDead" << endl;
+			}
+			auto match = actorDead.get_one();
+			IsActorDead_byPattern = (IsActorDeadType)match.get<void>();
 		}
 
 		/*
 		* 48 8b 0d ?? ?? ?? ?? 39 41 08 0f 85
-		* Seems to point to a variable that is == 0 while combat is ongoing
-		* and == 1 when combat is finished (i.e. either the player or all enemies are knocked out)
+		* Seems to point to a variable that is == 0 while combat is ongoing and == 1
+		* when combat is finished (i.e. either the player or all enemies are knocked out)
 		*/
-		auto globalVarPattern = pattern("48 8b 0d ? ? ? ? 39 41 08 0f 85");
-		if (globalVarPattern.count_hint(1).size() == 1) {
-			auto match = globalVarPattern.get_one();
+		auto globalPattern = pattern("48 8b 0d ? ? ? ? 39 41 08 0f 85");
+		if (globalPattern.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: IsCombatFinished" << endl;
+			}
+			auto match = globalPattern.get_one();
 			ReadOffsetValue(match.get<void>(3), globalPointer);
 		}
 	}
