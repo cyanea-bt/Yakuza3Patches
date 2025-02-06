@@ -26,7 +26,6 @@ void UpdateHeat_14043afc0
   undefined8 extraout_XMM0_Qa_03;
   undefined8 extraout_XMM0_Qa_04;
   undefined8 extraout_XMM0_Qa_05;
-  undefined8 extraout_XMM0_Qa_06;
   undefined auVar17 [16];
   undefined auVar20 [32];
   undefined extraout_var_00 [24];
@@ -70,8 +69,12 @@ void UpdateHeat_14043afc0
                     /* Checks if combat is active (0 = active, 1 = inactive)
                        Will be inactive e.g. during Heat moves/cutscenes. */
   uVar8 = IsCombatInactive_14047a330();
+                    /* No clue yet when (param_1 + 0x27b) & 0x10000) is != 0 */
                     /* (*param_1 + 0x268)) = IsActorDead(param_1)
                        Checks if the player is dead (0 = alive, 1 = dead) */
+                    /* (param_1[0x27a] + 0x354) & 0x4000000) is == 0 while combat is ongoing and ==
+                       1 during combat transitions (combat intro/fade to black when the player dies)
+                        */
                     /* (*(int *)(DAT_14122cde8 + 8) points to a variable that is == 0 while combat
                        is ongoing and == 1 when combat is finished (i.e. either the player or all
                        enemies are knocked out) */
@@ -113,20 +116,19 @@ void UpdateHeat_14043afc0
       vmovss_avx(*(undefined4 *)((longlong)param_1 + 0x1cc4));
       auVar37 = vmovss_avx(0x41a00000);
       auVar33 = vxorps_avx(auVar33,auVar33);
-      auVar19 = vcomiss_avx(auVar33);
-      auVar35 = vmovss_avx(0x3f8ccccd);
-      uVar8 = auVar19._0_8_;
+      vcomiss_avx(auVar33);
+      auVar19 = vmovss_avx(0x3f8ccccd);
       if ((bool)uVar15) {
         if ((*(short *)((longlong)param_1 + 0x1abe) != 0) &&
            ((*(byte *)((longlong)param_1 + 0x1a9c) & 0x10) == 0)) {
           auVar32 = auVar33;
           iVar7 = (**(code **)(*param_1 + 0x288))(param_1);
           auVar22._8_24_ = extraout_var_01;
-          auVar22._0_8_ = extraout_XMM0_Qa_01;
+          auVar22._0_8_ = extraout_XMM0_Qa_00;
           auVar18 = auVar22._0_16_;
-          auVar19 = auVar36;
+          auVar35 = auVar36;
           if (iVar7 != 0) {
-            auVar19 = auVar35;
+            auVar35 = auVar19;
           }
           auVar31 = vxorps_avx(auVar31,auVar31);
           auVar31 = vcvtsi2ss_avx(auVar31,(uint)*(ushort *)((longlong)param_1 + 0x1abe));
@@ -134,48 +136,46 @@ void UpdateHeat_14043afc0
           auVar4 = vmulss_avx(auVar31,auVar37);
           auVar31 = vmovss_avx(0x40400000);
           auVar18 = vmulss_avx(auVar18,auVar4);
-          uVar8 = auVar18._0_8_;
           auVar18 = vmulss_avx(auVar18,auVar34);
-          auVar19 = vmulss_avx(auVar18,auVar19);
+          auVar35 = vmulss_avx(auVar18,auVar35);
           goto LAB_14043b20e;
         }
       }
       else {
         auVar32 = auVar33;
         iVar7 = (**(code **)(*param_1 + 0x288))(param_1);
-        auVar19 = auVar36;
+        auVar35 = auVar36;
         if (iVar7 != 0) {
-          auVar19 = auVar35;
+          auVar35 = auVar19;
         }
         auVar18 = vmulss_avx(auVar37,ZEXT416(*(uint *)((longlong)param_1 + 0x1cc4)));
         auVar18 = vmulss_avx(auVar18,auVar34);
-        auVar19 = vmulss_avx(auVar18,auVar19);
-        uVar8 = extraout_XMM0_Qa_00;
+        auVar35 = vmulss_avx(auVar18,auVar35);
 LAB_14043b20e:
         uVar11 = 0;
-        auVar17 = vaddss_avx(auVar17,auVar19);
+        auVar17 = vaddss_avx(auVar17,auVar35);
       }
-      iVar7 = (**(code **)(*param_1 + 0x750))(uVar8,0xdd);
+      iVar7 = (**(code **)(*param_1 + 0x750))(param_1,0xdd);
       if ((iVar7 != 0) && (*(short *)(param_1 + 0x358) != 0)) {
         uVar11 = 0;
         auVar32 = auVar33;
         iVar7 = (**(code **)(*param_1 + 0x288))(param_1);
         auVar23._8_24_ = extraout_var_02;
-        auVar23._0_8_ = extraout_XMM0_Qa_02;
+        auVar23._0_8_ = extraout_XMM0_Qa_01;
         if (iVar7 == 0) {
-          auVar35 = auVar36;
+          auVar19 = auVar36;
         }
-        auVar19 = vxorps_avx(auVar23._0_16_,auVar23._0_16_);
-        auVar19 = vcvtsi2ss_avx(auVar19,(uint)*(ushort *)(param_1 + 0x358));
-        auVar19 = vmulss_avx(auVar19,auVar37);
-        auVar34 = vmulss_avx(auVar19,auVar34);
+        auVar35 = vxorps_avx(auVar23._0_16_,auVar23._0_16_);
+        auVar35 = vcvtsi2ss_avx(auVar35,(uint)*(ushort *)(param_1 + 0x358));
+        auVar35 = vmulss_avx(auVar35,auVar37);
+        auVar34 = vmulss_avx(auVar35,auVar34);
         auVar34 = vmulss_avx(auVar34,ZEXT416(0x3fc00000));
-        auVar34 = vmulss_avx(auVar34,auVar35);
+        auVar34 = vmulss_avx(auVar34,auVar19);
         auVar17 = vaddss_avx(auVar17,auVar34);
       }
       iVar7 = (**(code **)(*param_1 + 0x750))(param_1);
       auVar24._8_24_ = extraout_var_03;
-      auVar24._0_8_ = extraout_XMM0_Qa_03;
+      auVar24._0_8_ = extraout_XMM0_Qa_02;
       auVar34 = vmovss_avx(0x41200000);
       if ((iVar7 != 0) && (*(int *)(param_1[0x68] + 0xd0) == 0x28f)) {
         uVar11 = 0;
@@ -243,7 +243,7 @@ LAB_14043b489:
                         else if (iVar7 == 10) goto LAB_14043b489;
                         iVar7 = (**(code **)(*param_1 + 0x290))(param_1);
                         auVar28._8_24_ = extraout_var_07;
-                        auVar28._0_8_ = extraout_XMM0_Qa_06;
+                        auVar28._0_8_ = extraout_XMM0_Qa_05;
                         auVar19 = auVar28._0_16_;
                         if (iVar7 != 0) {
                           auVar31 = vmulss_avx(auVar31,auVar37);
@@ -286,7 +286,7 @@ LAB_14043b4e3:
               if ((bool)uVar15) {
                 iVar7 = (**(code **)(*param_1 + 0x750))(param_1,auVar37._0_8_);
                 auVar27._8_24_ = extraout_var_06;
-                auVar27._0_8_ = extraout_XMM0_Qa_05;
+                auVar27._0_8_ = extraout_XMM0_Qa_04;
                 auVar19 = auVar27._0_16_;
                 uVar14 = 0;
                 uVar15 = iVar7 == 0;
@@ -315,16 +315,14 @@ LAB_14043b515:
             if (bVar16) {
               auVar34 = vaddss_avx(auVar34,ZEXT416(0x3e800000));
             }
-            uVar8 = auVar34._0_8_;
             vucomiss_avx(auVar34,auVar33);
             if (((uVar9 & 1) == 0) || (bVar16)) {
               auVar34 = vsubss_avx(auVar36,auVar34);
-              uVar8 = auVar34._0_8_;
               auVar19 = vmulss_avx(auVar19,auVar34);
             }
-            iVar7 = (**(code **)(*param_1 + 0x290))(uVar8);
+            iVar7 = (**(code **)(*param_1 + 0x290))(param_1);
             auVar25._8_24_ = extraout_var_04;
-            auVar25._0_8_ = extraout_XMM0_Qa_04;
+            auVar25._0_8_ = extraout_XMM0_Qa_03;
             uVar14 = 0;
             uVar15 = iVar7 == 0;
             if (!(bool)uVar15) {

@@ -49,9 +49,17 @@ namespace HeatFix {
 	static uintptr_t globalAddress = 0;
 	static uintptr_t isCombatFinished = 0;
 
+	static uint32_t unknownCondition = 0; // No clue when this one is != 0
+	static uint32_t IsCombatInTransition = 0; // Seems to be != 0 during combat intro or when fading to black after the player dies
+
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		if (IsActorDead_byRef == nullptr) {
-			IsActorDead_byRef = (IsActorDeadType)*(uintptr_t*)(*(uintptr_t*)param1 + 0x268); // this is how the game accesses this function
+			// MOV  RDX,qword ptr [param_1]
+			// CALL qword ptr [RDX + 0x268]
+			uintptr_t pIsActorDead = *(uintptr_t *)(param1);
+			pIsActorDead = *(uintptr_t *)(pIsActorDead + 0x268);
+			IsActorDead_byRef = (IsActorDeadType)pIsActorDead;
+
 			if (IsActorDead_byRef != IsActorDead_byPattern) {
 				logFailed = !logFailed;
 				logFailed = !logFailed; // just need something to put a breakpoint on
@@ -62,6 +70,18 @@ namespace HeatFix {
 			globalAddress = *(uintptr_t *)globalPointer;
 		}
 		isCombatFinished = *(uintptr_t *)(globalAddress + 8);
+
+		// MOV  RBX,param_1
+		// TEST dword ptr [RBX + 0x13d8],0x10000
+		unknownCondition = *(uint32_t *)(param1 + 0x13d8);
+		unknownCondition &= 0x10000;
+
+		// MOV  RBX,param_1
+		// MOV  RCX,qword ptr [RBX + 0x13d0]
+		// TEST dword ptr [RCX + 0x354],0x4000000
+		uintptr_t pIsCombatInTransition = *(uintptr_t *)(param1 + 0x13d0);
+		IsCombatInTransition = *(uint32_t *)(pIsCombatInTransition + 0x354);
+		IsCombatInTransition &= 0x4000000;
 
 		if (s_Debug) {
 			if (!ofs1.is_open() && !logFailed) {
@@ -77,9 +97,9 @@ namespace HeatFix {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
 				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << format(" - IsPlayerInCombat: {:d} - shouldBeZero: {:d} - IsActorDead_byRef: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
+				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << format(" - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - IsActorDead: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
 				if (counter % 2 == 0) {
-					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << format(" - IsPlayerInCombat: {:d} - shouldBeZero: {:d} - IsActorDead_byRef: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
+					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << format(" - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - IsActorDead: {:d}", IsPlayerInCombat(), IsCombatInactive(), IsActorDead_byRef(param1)) << endl;
 				}
 				if (IsCombatInactive() != 0) {
 					logFailed = !logFailed;
@@ -90,6 +110,14 @@ namespace HeatFix {
 					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
 				if (isCombatFinished != 0) {
+					logFailed = !logFailed;
+					logFailed = !logFailed; // just need something to put a breakpoint on
+				}
+				if (IsPlayerInCombat() && unknownCondition != 0) {
+					logFailed = !logFailed;
+					logFailed = !logFailed; // just need something to put a breakpoint on
+				}
+				if (IsPlayerInCombat() && IsCombatInTransition != 0) {
 					logFailed = !logFailed;
 					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
