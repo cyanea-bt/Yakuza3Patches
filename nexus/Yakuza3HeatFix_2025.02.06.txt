@@ -1,0 +1,2 @@
+Now compatible with ShinRyuModManager.
+Please delete the old version's files before using this one.

@@ -10,7 +10,7 @@ the drain rate is ~2x of what it is on PS3.
 
 Keep in mind that I chose not to rewrite this function for 60 updates per second. That'd be  
 **a lot** more work and also might introduce even more inconsistencies/bugs. So all this patch  
-really does, is to make sure that the Heat calculations happen 30 times per second.  
+really does, is to make sure that the Heat gain/drain calculations happen 30 times per second.  
 I also compared the patched Heat drain to the PS3 original and they look pretty much identical.
 
 ## Compatibility
@@ -23,19 +23,20 @@ Other versions might work as well, YMMV.
 `6c688b51650fa2e9be39e1d934e872602ee54799` `Yakuza3.exe (GOG)`  
 
 ## Install
-1. You'll need to set up your copy of **Yakuza 3 Remastered** so that it will load `.asi` files.  
-If you're using [SilentPatchYRC](https://github.com/CookiePLMonster/SilentPatchYRC) and/or [ShinRyuModManager](https://github.com/SRMM-Studio/ShinRyuModManager), you are already good to go since both come with the required ASI Loader. Otherwise you'll have to track down a working version here: [Ultimate-ASI-Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader)  
-2. Download `Yakuza3HeatFix.zip` from **Releases** and extract to your Yakuza 3 directory.  
-3. Make sure that `Yakuza3HeatFix.asi` is in the same directory as your `Yakuza3.exe`.  
-4. You're done, start the game and enjoy.  
+Mod is now compatible with [ShinRyuModManager](https://github.com/SRMM-Studio/ShinRyuModManager), so simply download and install like all other SRMM mods.  
 
-### Verify that the patch was installed correctly (optional)
-5. Exit the game after you get to the main menu.  
-6. Next to `Yakuza3HeatFix.asi` there should now be a `Yakuza3HeatFix.txt`.  
-7. Open this text file and verify that the first 2 lines read:  
+If you don't want to use [ShinRyuModManager](https://github.com/SRMM-Studio/ShinRyuModManager), you can also opt to use any other ASI Loader instead (like the one included with [SilentPatchYRC](https://github.com/CookiePLMonster/SilentPatchYRC)). In that case you should extract `Yakuza3HeatFix.asi` to the same directory as `Yakuza3.exe` AND `dinput8.dll`.
+
+### Verify that the patch is working as intended (optional)
+1. Start the game after installing/enabling the mod.  
+2. After you get to the main menu, there should now be a `Yakuza3HeatFix.txt` next to `Yakuza3.exe`.  
+3. Open this text file and verify that the first 5 lines read:  
   
 ```
-Found HeatUpdate pattern!
+Found pattern: HeatUpdate
+Found pattern: IsPlayerInCombat
+Found pattern: IsCombatInactive
+Found pattern: IsCombatFinished
 Hook done!
 ```
 
