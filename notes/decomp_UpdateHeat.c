@@ -62,11 +62,16 @@ void UpdateHeat_14043afc0
   undefined extraout_var_09 [24];
   
   auVar33 = in_YMM8._0_16_;
-  uVar5 = FUN_14076ab80();
+                    /* Checks if player is in combat (0 = not in combat, 1 = in combat) */
+  uVar5 = IsPlayerInCombat_14076ab80();
   if (uVar5 == 0) {
     return;
   }
-  uVar8 = FUN_14047a330();
+                    /* Checks if combat is active (0 = active, 1 = inactive)
+                       Will be inactive e.g. during Heat moves/cutscenes. */
+  uVar8 = IsCombatInactive_14047a330();
+                    /* (*param_1 + 0x268)) = IsActorDead(param_1)
+                       Checks if the player is dead (0 = alive, 1 = dead) */
   if (((((*(uint *)(param_1 + 0x27b) & 0x10000) != 0) ||
        (iVar6 = (**(code **)(*param_1 + 0x268))(param_1), iVar6 != 0)) ||
       ((*(uint *)(param_1[0x27a] + 0x354) & 0x4000000) != 0)) || (*(int *)(DAT_14122cde8 + 8) != 0))

@@ -30,7 +30,7 @@ namespace HeatFix {
 
 	/*
 	* Parameter types aren't correct but it shouldn't matter for our purposes.
-	* param1 is probably a pointer to some kind of class/struct
+	* param1 is probably a pointer to some kind of class instance
 	* No clue what the other 3 are, but all 4 parameters seem to be 8 bytes wide.
 	*/
 	static void(*origHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
@@ -38,7 +38,18 @@ namespace HeatFix {
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
 	static bool logFailed = false;
 
+	static uint32_t(*retIfZero)();
+	static uintptr_t(*shouldBeZero)();
+
+	typedef uint32_t(*classFuncType)(uintptr_t);
+	static classFuncType classMethod = nullptr;
+	static classFuncType patternMethod;
+
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
+		if (classMethod == nullptr) {
+			classMethod = (classFuncType)*(uintptr_t*)(*(uintptr_t*)param1 + 0x268); // this is how the game accesses this function
+		}
+
 		if (s_Debug) {
 			if (!ofs1.is_open() && !logFailed) {
 				ofs1 = ofstream("Yakuza3HeatFix_Debug1.txt", ios::out | ios::trunc | ios::binary);
@@ -53,9 +64,17 @@ namespace HeatFix {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
 				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << endl;
+				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << format(" - retIfZero: {:d} - shouldBeZero: {:d} - classMethod: {:d}", retIfZero(), shouldBeZero(), classMethod(param1)) << endl;
 				if (counter % 2 == 0) {
-					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << endl;
+					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << format(" - retIfZero: {:d} - shouldBeZero: {:d} - classMethod: {:d}", retIfZero(), shouldBeZero(), classMethod(param1)) << endl;
+				}
+				if (shouldBeZero() != 0) {
+					logFailed = !logFailed;
+					logFailed = !logFailed; // just need something to put a breakpoint on
+				}
+				if (classMethod(param1) != 0) {
+					logFailed = !logFailed;
+					logFailed = !logFailed; // just need something to put a breakpoint on
 				}
 			}
 		}
@@ -113,7 +132,8 @@ void OnInitializeHook()
 	}
 
 	// Hook/Redirect the game's HeatUpdate function to our own function.
-	// As far as I can tell - HeatUpdate is only called while the game is unpaused and the player is in combat.
+	// As far as I can tell - HeatUpdate is only called while the game is unpaused.
+	// So Heat gain caused by using an Item (e.g. Staminan) from the menu won't call this function.
 	{
 		using namespace HeatFix;
 		/*
@@ -134,6 +154,46 @@ void OnInitializeHook()
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
 			ReadCall(match.get<void>(), origHeatFunc);
 			InjectHook(match.get<void>(), trampoline->Jump(PatchedHeatFunc), PATCH_CALL);
+		}
+
+		/*
+		* 48 81 ec c0 00 00 00 48 8b d9 e8 ?? ?? ?? ?? 85 c0
+		* Pattern works for Steam and GOG versions.
+		* 
+		* HeatUpdate() returns right at the start if this function returns 0.
+		* Tests suggest that this always returns 0, unless the player is in combat.
+		*/
+		auto func1 = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
+		if (func1.count_hint(1).size() == 1) {
+			auto match = func1.get_one();
+			ReadCall(match.get<void>(10), retIfZero);
+		}
+
+		/*
+		* e8 ?? ?? ?? ?? f7 83 d8 13 00 00 00 00 01 00
+		* Pattern works for Steam and GOG versions.
+		* 
+		* Most of HeatUpdate()'s code is skipped if this function returns != 0
+		* Seems to return 1 if combat is inactive, e.g. during Heat moves/cutscenes
+		*/
+		auto func2 = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");
+		if (func2.count_hint(1).size() == 1) {
+			auto match = func2.get_one();
+			ReadCall(match.get<void>(), shouldBeZero);
+		}
+
+		/*
+		* 8b 81 d8 13 00 00 c1 e8 1e 83 e0 01
+		* Pattern works for Steam and GOG versions.
+		* 
+		* Almost all of HeatUpdate()'s code is skipped if this function returns != 0
+		* Seems to return 1 if the player is dead.
+		* Don't necessarily have to get this via pattern, since we can get the address from the player object during HeatUpdate()
+		*/
+		auto func3 = pattern("8b 81 d8 13 00 00 c1 e8 1e 83 e0 01");
+		if (func3.count_hint(1).size() == 1) {
+			auto match = func3.get_one();
+			patternMethod = (classFuncType)match.get<void>();
 		}
 	}
 
