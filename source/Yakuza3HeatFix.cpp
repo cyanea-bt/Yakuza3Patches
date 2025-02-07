@@ -44,6 +44,7 @@ namespace HeatFix {
 
 	typedef uint32_t(*IsActorDeadType)(uintptr_t);
 	static IsActorDeadType IsActorDead = nullptr;
+	static IsActorDeadType IsActorDead_byPattern;
 
 	static uintptr_t globalPointer = 0;
 	static uintptr_t pIsCombatFinished = 0;
@@ -51,6 +52,20 @@ namespace HeatFix {
 
 	static uint32_t unknownCondition = 0; // No clue when this one is != 0
 	static uint32_t IsCombatInTransition = 0; // Seems to be != 0 during combat intro or when fading to black after the player dies
+
+	static uint32_t PatchedIsActorDead(void* actor) {
+		uint8_t* stringAddr = (uint8_t *)actor;
+		stringAddr += 0x160;
+		string actorType((char *)stringAddr);
+		if (IsPlayerInCombat() && actorType != "Kiryu") {
+			return 1; // makes enemies unable to hit Kiryu but doesn't stop their AI from moving/attacking
+		}
+
+		// return *(uint *)(param_1 + 0x13d8) >> 0x1e & 1;
+		uint32_t val = *(uint32_t *)((uintptr_t)actor + 0x13d8);
+		val = val >> 0x1e & 1;
+		return val;
+	}
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		// MOV  param_1,qword ptr [DAT_14122cde8]
@@ -236,6 +251,26 @@ void OnInitializeHook()
 			}
 			auto match = globalPattern.get_one();
 			ReadOffsetValue(match.get<void>(3), globalPointer);
+		}
+
+		/*
+		* 8b 81 d8 13 00 00 c1 e8 1e 83 e0 01
+		* Pattern works for Steam and GOG versions.
+		*
+		* Almost all of HeatUpdate()'s code is skipped if this function returns != 0
+		* Seems to return 1 if the player is dead.
+		* Don't necessarily have to get this via pattern, since we can get the address from the player object during HeatUpdate()
+		*/
+		auto actorDead = pattern("8b 81 d8 13 00 00 c1 e8 1e 83 e0 01");
+		if (actorDead.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: IsActorDead" << endl;
+			}
+			auto match = actorDead.get_one();
+			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
+			IsActorDead_byPattern = (IsActorDeadType)match.get<void>();
+			Nop(match.get<void>(), 12);
+			InjectHook(match.get<void>(), trampoline->Jump(PatchedIsActorDead), PATCH_JUMP);
 		}
 	}
 
