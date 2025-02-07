@@ -28,6 +28,7 @@ namespace HeatFix {
 	static const auto tz = current_zone();
 	static ofstream ofs1, ofs2;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
+	static string dbg_msg;
 	static bool logFailed = false;
 
 	/*
@@ -52,14 +53,16 @@ namespace HeatFix {
 	static uint32_t IsCombatInTransition = 0; // Seems to be != 0 during combat intro or when fading to black after the player dies
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
+		// MOV  param_1,qword ptr [DAT_14122cde8]
+		// CMP  dword ptr[param_1 + 0x8], EAX
+		pIsCombatFinished = *(uintptr_t *)globalPointer;
+		isCombatFinished = *(uintptr_t *)(pIsCombatFinished + 8);
+
 		// MOV  RDX,qword ptr [param_1]
 		// CALL qword ptr [RDX + 0x268]
 		uintptr_t pIsActorDead = *(uintptr_t *)(param1);
 		pIsActorDead = *(uintptr_t *)(pIsActorDead + 0x268);
 		IsActorDead = (IsActorDeadType)pIsActorDead;
-
-		pIsCombatFinished = *(uintptr_t *)globalPointer;
-		isCombatFinished = *(uintptr_t *)(pIsCombatFinished + 8);
 
 		// MOV  RBX,param_1
 		// TEST dword ptr [RBX + 0x13d8],0x10000
@@ -87,11 +90,11 @@ namespace HeatFix {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
 				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				const string msg = format(" - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - unknownCondition: {:d} - IsActorDead: {:d} - IsCombatInTransition: {:d} - isCombatFinished: {:d}", 
-					IsPlayerInCombat(), IsCombatInactive(), unknownCondition, IsActorDead(param1), IsCombatInTransition, isCombatFinished);
-				ofs1 << "PatchedHeatFunc: " << str_TzNow << " - " << dbg_Counter1++ << msg << endl;
+				dbg_msg = format("- TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - unknownCondition: {:d} - IsActorDead: {:d} - IsCombatInTransition: {:d} - isCombatFinished: {:d}", 
+					str_TzNow, IsPlayerInCombat(), IsCombatInactive(), unknownCondition, IsActorDead(param1), IsCombatInTransition, isCombatFinished);
+				ofs1 << "PatchedHeatFunc: " << dbg_Counter1++ << dbg_msg << endl;
 				if (counter % 2 == 0) {
-					ofs2 << "OrigHeatFunc: " << str_TzNow << " - " << dbg_Counter2++ << msg << endl;
+					ofs2 << "OrigHeatFunc: " << dbg_Counter2++ << dbg_msg << endl;
 				}
 			}
 		}
@@ -100,16 +103,16 @@ namespace HeatFix {
 			counter = 0;
 			return; // HeatUpdate() will return immediately in this case, so we just skip calling it
 		}
-		if (IsCombatInactive() || unknownCondition || IsActorDead(param1) || IsCombatInTransition || isCombatFinished) {
+		if (counter == 1 && (IsCombatInactive() || unknownCondition || IsActorDead(param1) || IsCombatInTransition || isCombatFinished)) {
 			if (s_Debug) {
-				if (ofs1.is_open()) {
-					ofs1 << "Hit condition for faster HeatUpdate()" << endl;
+				if (ofs2.is_open()) {
+					ofs2 << "Fast HeatUpdate: " << dbg_Counter2++ << dbg_msg << endl;
 				}
 			}
-			counter = 0;
 			// HeatUpdate() won't change the Heat value in these cases, but will still execute some code.
 			// Since I don't know how important that code is, we'll call HeatUpdate() immediately instead of waiting for the next frame/update.
 			origHeatFunc(param1, param2, param3, param4);
+			counter++;
 		}
 		else {
 			/*

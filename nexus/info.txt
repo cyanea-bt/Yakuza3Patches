@@ -29,13 +29,13 @@ I only tested this patch on the [url=https://steamdb.info/patchnotes/6407476/]m
 
 [b][size=5]Install:[/size][/b]
 Mod is now compatible with [url=https://github.com/SRMM-Studio/ShinRyuModManager]ShinRyuModManager[/url], so simply download and install like all other SRMM mods.
-[b]Please delete the old version's files before using this one.[/b]
+[b]Please delete the old version's files before using the new one.[/b]
 
 If you don't want to use [url=https://github.com/SRMM-Studio/ShinRyuModManager]ShinRyuModManager[/url], you can also opt to use any other ASI Loader instead (like the one included with [url=https://github.com/CookiePLMonster/SilentPatchYRC]SilentPatchYRC[/url]). In that case you should extract [b]Yakuza3HeatFix.asi[/b] to the same directory as [b]Yakuza3.exe AND dinput8.dll[/b]
 
 [size=3][b]Verify that the patch is working as intended (optional):[/b][/size]
 1. Start the game after installing/enabling the mod.
-2. After you get to the main menu, there should now be a [b]Yakuza3HeatFix.txt[/b] next to [b]Yakuza3.exe[/b]
+2. After you get to the main menu, there should now be a [b]Yakuza3HeatFix.txt[/b] next to [b]Yakuza3.exe[/b].
 3. Open this text file and verify that the first 5 lines read:
 
 [quote]Found pattern: HeatUpdate
