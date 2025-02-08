@@ -67,6 +67,30 @@ namespace HeatFix {
 		return val;
 	}
 
+	typedef void(*unkActorMethodType)(uintptr_t);
+	static unkActorMethodType unkActorMethod;
+	static int methodCounter = 0;
+
+	static void PatchedActorMethod(uintptr_t param1) {
+		if (!IsPlayerInCombat()) {
+			return unkActorMethod(param1);
+		}
+		else {
+			auto stringAddr = param1 + 0x160;
+			string actorType((char *)stringAddr);
+			if (actorType == "Enemy") {
+				if (methodCounter % 2 == 0) {
+					methodCounter = 0;
+					//unkActorMethod(param1);
+				}
+				methodCounter++;
+			}
+			else {
+				unkActorMethod(param1);
+			}
+		}
+	}
+
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		// MOV  param_1,qword ptr [DAT_14122cde8]
 		// CMP  dword ptr[param_1 + 0x8], EAX
@@ -267,10 +291,39 @@ void OnInitializeHook()
 				ofs << "Found pattern: IsActorDead" << endl;
 			}
 			auto match = actorDead.get_one();
+			//Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
+			//IsActorDead_byPattern = (IsActorDeadType)match.get<void>();
+			//Nop(match.get<void>(), 12);
+			//InjectHook(match.get<void>(), trampoline->Jump(PatchedIsActorDead), PATCH_JUMP);
+		}
+
+		/*
+		* 40 57 48 81 ec 80 00 00 00 48 8b 01 48 8d 54 24 40
+		* This method is called by player and enemy actors while the game is unpaused
+		*/
+		auto actorMethod = pattern("40 57 48 81 ec 80 00 00 00 48 8b 01 48 8d 54 24 40");
+		if (actorMethod.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: actorMethod" << endl;
+			}
+			auto match = actorMethod.get_one();
+			unkActorMethod = (unkActorMethodType)match.get<void>();
+		}
+
+		/*
+		* ff 90 20 0c 00 00 48 8b 07 - if player
+		* ff 90 20 0c 00 00 83 fe 20 73 1c - if enemy
+		* This is the call site for the method above. Game gets the method's address as a offset from the actor object.
+		*/
+		auto callsActorMethod = pattern("ff 90 20 0c 00 00 83 fe 20 73 1c");
+		if (callsActorMethod.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: callsActorMethod" << endl;
+			}
+			auto match = callsActorMethod.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
-			IsActorDead_byPattern = (IsActorDeadType)match.get<void>();
-			Nop(match.get<void>(), 12);
-			InjectHook(match.get<void>(), trampoline->Jump(PatchedIsActorDead), PATCH_JUMP);
+			Nop(match.get<void>(), 6);
+			InjectHook(match.get<void>(), trampoline->Jump(PatchedActorMethod), PATCH_CALL);
 		}
 	}
 
