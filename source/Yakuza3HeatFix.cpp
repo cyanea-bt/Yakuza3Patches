@@ -26,7 +26,7 @@ namespace HeatFix {
 	using namespace std;
 	using namespace std::chrono;
 	static const auto tz = current_zone();
-	static ofstream ofs1, ofs2;
+	static ofstream ofs1, ofs2, ofs3;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
 	static string dbg_msg;
 	static bool logFailed = false;
@@ -76,6 +76,11 @@ namespace HeatFix {
 		IsCombatInTransition = *(uint32_t *)(pIsCombatInTransition + 0x354);
 		IsCombatInTransition &= 0x4000000;
 
+		// (*(ushort *)((longlong)param_1 + 0x1abc)
+		// MOV   RBX,param_1
+		// MOVZX EAX,word ptr [RBX + 0x1abc]
+		uint16_t unknownVar = *(uint16_t *)(param1 + 0x1abc);
+
 		if (s_Debug) {
 			if (!ofs1.is_open() && !logFailed) {
 				ofs1 = ofstream("Yakuza3HeatFix_Debug1.txt", ios::out | ios::trunc | ios::binary);
@@ -83,14 +88,17 @@ namespace HeatFix {
 			if (!ofs2.is_open() && !logFailed) {
 				ofs2 = ofstream("Yakuza3HeatFix_Debug2.txt", ios::out | ios::trunc | ios::binary);
 			}
-			if (!ofs1.is_open() || !ofs2.is_open()) {
+			if (!ofs3.is_open() && !logFailed) {
+				ofs3 = ofstream("Yakuza3HeatFix_Debug3.txt", ios::out | ios::trunc | ios::binary);
+			}
+			if (!ofs1.is_open() || !ofs2.is_open() || !ofs3.is_open()) {
 				logFailed = true; // don't keep on trying to write logs if open failed (e.g. in case of missing write permissions)
 			}
 			else {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
 				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				dbg_msg = format("- TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - unknownCondition: {:d} - IsActorDead: {:d} - IsCombatInTransition: {:d} - isCombatFinished: {:d}", 
+				dbg_msg = format(" - TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - unknownCondition: {:d} - IsActorDead: {:d} - IsCombatInTransition: {:d} - isCombatFinished: {:d}", 
 					str_TzNow, IsPlayerInCombat(), IsCombatInactive(), unknownCondition, IsActorDead(param1), IsCombatInTransition, isCombatFinished);
 				ofs1 << "PatchedHeatFunc: " << dbg_Counter1++ << dbg_msg << endl;
 				if (counter % 2 == 0) {
@@ -133,6 +141,14 @@ namespace HeatFix {
 				origHeatFunc(param1, param2, param3, param4);
 			}
 			counter++;
+		}
+
+		if (s_Debug) {
+			if (ofs3.is_open()) {
+				ofs3 << "unknownVar before: " << unknownVar << dbg_msg << endl;
+				unknownVar = *(uint16_t *)(param1 + 0x1abc);
+				ofs3 << "unknownVar after:  " << unknownVar << endl;
+			}
 		}
 	}
 }
