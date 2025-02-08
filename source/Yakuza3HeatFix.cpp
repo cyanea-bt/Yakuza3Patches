@@ -81,7 +81,7 @@ namespace HeatFix {
 			if (actorType == "Enemy") {
 				if (methodCounter % 2 == 0) {
 					methodCounter = 0;
-					//unkActorMethod(param1);
+					unkActorMethod(param1);
 				}
 				methodCounter++;
 			}
