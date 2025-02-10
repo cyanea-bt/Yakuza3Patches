@@ -26,6 +26,7 @@ void UpdateHeat_14043afc0
   undefined8 extraout_XMM0_Qa_03;
   undefined8 extraout_XMM0_Qa_04;
   undefined8 extraout_XMM0_Qa_05;
+  undefined8 extraout_XMM0_Qa_06;
   undefined auVar17 [16];
   undefined auVar20 [32];
   undefined extraout_var_00 [24];
@@ -47,6 +48,10 @@ void UpdateHeat_14043afc0
   undefined auVar35 [16];
   undefined auVar36 [16];
   undefined auVar37 [16];
+  undefined in_YMM13 [32];
+  undefined auVar38 [16];
+  undefined auVar39 [16];
+  undefined in_YMM14 [32];
   undefined auVar21 [32];
   undefined auVar22 [32];
   undefined auVar23 [32];
@@ -61,6 +66,8 @@ void UpdateHeat_14043afc0
   undefined extraout_var_09 [24];
   
   auVar33 = in_YMM8._0_16_;
+  auVar38 = in_YMM14._0_16_;
+  auVar36 = in_YMM13._0_16_;
                     /* Checks if player is in combat (0 = not in combat, 1 = in combat) */
   uVar5 = IsPlayerInCombat_14076ab80();
   if (uVar5 == 0) {
@@ -69,7 +76,8 @@ void UpdateHeat_14043afc0
                     /* Checks if combat is active (0 = active, 1 = inactive)
                        Will be inactive e.g. during Heat moves/cutscenes. */
   uVar8 = IsCombatInactive_14047a330();
-                    /* No clue yet when (param_1 + 0x27b) & 0x10000) is != 0 */
+                    /* (param_1 + 0x27b) & 0x10000) is != 0 while combat is paused by a tutorial
+                       popup message */
                     /* (*param_1 + 0x268)) = IsActorDead(param_1)
                        Checks if the player is dead (0 = alive, 1 = dead) */
                     /* (param_1[0x27a] + 0x354) & 0x4000000) is == 0 while combat is ongoing and ==
@@ -92,7 +100,7 @@ void UpdateHeat_14043afc0
     sVar13 = *(short *)((longlong)param_1 + 0x14ca);
     sVar12 = *(short *)((longlong)param_1 + 0x14cc);
     auVar17 = auVar20._0_16_;
-    auVar36 = auVar34;
+    auVar37 = auVar34;
     iVar7 = (**(code **)(*param_1 + 0x290))(param_1);
     auVar21._8_24_ = extraout_var_00;
     auVar21._0_8_ = extraout_XMM0_Qa;
@@ -114,68 +122,71 @@ void UpdateHeat_14043afc0
     uVar15 = (*(uint *)((longlong)param_1 + 0x1404) & 8) == 0;
     if (((bool)uVar15) && (uVar15 = ((ulonglong)pcVar3 >> 0x28 & 1) == 0, (bool)uVar15)) {
       vmovss_avx(*(undefined4 *)((longlong)param_1 + 0x1cc4));
-      auVar37 = vmovss_avx(0x41a00000);
+      auVar39 = vmovss_avx(0x41a00000);
       auVar33 = vxorps_avx(auVar33,auVar33);
-      vcomiss_avx(auVar33);
-      auVar19 = vmovss_avx(0x3f8ccccd);
+      auVar19 = vcomiss_avx(auVar33);
+      auVar35 = vmovss_avx(0x3f8ccccd);
+      uVar8 = auVar19._0_8_;
       if ((bool)uVar15) {
         if ((*(short *)((longlong)param_1 + 0x1abe) != 0) &&
            ((*(byte *)((longlong)param_1 + 0x1a9c) & 0x10) == 0)) {
           auVar32 = auVar33;
           iVar7 = (**(code **)(*param_1 + 0x288))(param_1);
           auVar22._8_24_ = extraout_var_01;
-          auVar22._0_8_ = extraout_XMM0_Qa_00;
+          auVar22._0_8_ = extraout_XMM0_Qa_01;
           auVar18 = auVar22._0_16_;
-          auVar35 = auVar36;
+          auVar19 = auVar37;
           if (iVar7 != 0) {
-            auVar35 = auVar19;
+            auVar19 = auVar35;
           }
           auVar31 = vxorps_avx(auVar31,auVar31);
           auVar31 = vcvtsi2ss_avx(auVar31,(uint)*(ushort *)((longlong)param_1 + 0x1abe));
           FUN_14043a600((longlong)param_1);
-          auVar4 = vmulss_avx(auVar31,auVar37);
+          auVar4 = vmulss_avx(auVar31,auVar39);
           auVar31 = vmovss_avx(0x40400000);
           auVar18 = vmulss_avx(auVar18,auVar4);
+          uVar8 = auVar18._0_8_;
           auVar18 = vmulss_avx(auVar18,auVar34);
-          auVar35 = vmulss_avx(auVar18,auVar35);
+          auVar19 = vmulss_avx(auVar18,auVar19);
           goto LAB_14043b20e;
         }
       }
       else {
         auVar32 = auVar33;
         iVar7 = (**(code **)(*param_1 + 0x288))(param_1);
-        auVar35 = auVar36;
+        auVar19 = auVar37;
         if (iVar7 != 0) {
-          auVar35 = auVar19;
+          auVar19 = auVar35;
         }
-        auVar18 = vmulss_avx(auVar37,ZEXT416(*(uint *)((longlong)param_1 + 0x1cc4)));
+        auVar18 = vmulss_avx(auVar39,ZEXT416(*(uint *)((longlong)param_1 + 0x1cc4)));
         auVar18 = vmulss_avx(auVar18,auVar34);
-        auVar35 = vmulss_avx(auVar18,auVar35);
+        auVar19 = vmulss_avx(auVar18,auVar19);
+        uVar8 = extraout_XMM0_Qa_00;
 LAB_14043b20e:
         uVar11 = 0;
-        auVar17 = vaddss_avx(auVar17,auVar35);
+        auVar17 = vaddss_avx(auVar17,auVar19);
       }
-      iVar7 = (**(code **)(*param_1 + 0x750))(param_1,0xdd);
+      iVar7 = (**(code **)(*param_1 + 0x750))(uVar8,0xdd);
       if ((iVar7 != 0) && (*(short *)(param_1 + 0x358) != 0)) {
         uVar11 = 0;
         auVar32 = auVar33;
         iVar7 = (**(code **)(*param_1 + 0x288))(param_1);
         auVar23._8_24_ = extraout_var_02;
-        auVar23._0_8_ = extraout_XMM0_Qa_01;
+        auVar23._0_8_ = extraout_XMM0_Qa_02;
         if (iVar7 == 0) {
-          auVar19 = auVar36;
+          auVar35 = auVar37;
         }
-        auVar35 = vxorps_avx(auVar23._0_16_,auVar23._0_16_);
-        auVar35 = vcvtsi2ss_avx(auVar35,(uint)*(ushort *)(param_1 + 0x358));
-        auVar35 = vmulss_avx(auVar35,auVar37);
-        auVar34 = vmulss_avx(auVar35,auVar34);
+        auVar19 = vxorps_avx(auVar23._0_16_,auVar23._0_16_);
+        auVar19 = vcvtsi2ss_avx(auVar19,(uint)*(ushort *)(param_1 + 0x358));
+        auVar19 = vmulss_avx(auVar19,auVar39);
+        auVar34 = vmulss_avx(auVar19,auVar34);
         auVar34 = vmulss_avx(auVar34,ZEXT416(0x3fc00000));
-        auVar34 = vmulss_avx(auVar34,auVar19);
+        auVar34 = vmulss_avx(auVar34,auVar35);
         auVar17 = vaddss_avx(auVar17,auVar34);
       }
       iVar7 = (**(code **)(*param_1 + 0x750))(param_1);
       auVar24._8_24_ = extraout_var_03;
-      auVar24._0_8_ = extraout_XMM0_Qa_02;
+      auVar24._0_8_ = extraout_XMM0_Qa_03;
       auVar34 = vmovss_avx(0x41200000);
       if ((iVar7 != 0) && (*(int *)(param_1[0x68] + 0xd0) == 0x28f)) {
         uVar11 = 0;
@@ -203,7 +214,7 @@ LAB_14043b20e:
             auVar26._8_24_ = extraout_var_05;
             vmovss_avx(0x41980000);
             auVar19 = auVar26._0_16_;
-            auVar37 = vcomiss_avx(auVar19);
+            auVar39 = vcomiss_avx(auVar19);
             if (bVar16) {
               uVar14 = 0;
               uVar15 = (*(uint *)((longlong)param_1 + 0x13e4) & 0x10000000) == 0;
@@ -225,8 +236,8 @@ LAB_14043b20e:
                       uVar15 = sVar13 == 0;
                       if ((bool)uVar15) {
                         iVar7 = *(int *)((longlong)param_1 + 0x1a3c);
-                        auVar37 = vmovss_avx(0x3f000000);
-                        auVar32 = vaddss_avx(auVar32,auVar36);
+                        auVar39 = vmovss_avx(0x3f000000);
+                        auVar32 = vaddss_avx(auVar32,auVar37);
                         auVar32 = vminss_avx(auVar31,auVar32);
                         auVar31 = auVar32;
                         if (iVar7 == 4) {
@@ -237,22 +248,22 @@ LAB_14043b489:
                           }
                         }
                         else if (iVar7 == 9) {
-                          auVar34 = vmulss_avx(auVar32,auVar37);
-                          auVar31 = vmaxss_avx(auVar36,auVar34);
+                          auVar34 = vmulss_avx(auVar32,auVar39);
+                          auVar31 = vmaxss_avx(auVar37,auVar34);
                         }
                         else if (iVar7 == 10) goto LAB_14043b489;
                         iVar7 = (**(code **)(*param_1 + 0x290))(param_1);
                         auVar28._8_24_ = extraout_var_07;
-                        auVar28._0_8_ = extraout_XMM0_Qa_05;
+                        auVar28._0_8_ = extraout_XMM0_Qa_06;
                         auVar19 = auVar28._0_16_;
                         if (iVar7 != 0) {
-                          auVar31 = vmulss_avx(auVar31,auVar37);
+                          auVar31 = vmulss_avx(auVar31,auVar39);
                         }
                         uVar14 = false;
                         uVar15 = DAT_1411c6524 == 0;
                         if ((bool)uVar15) {
-                          auVar19 = vmulss_avx(auVar32,auVar37);
-                          auVar32 = vmaxss_avx(auVar36,auVar19);
+                          auVar19 = vmulss_avx(auVar32,auVar39);
+                          auVar32 = vmaxss_avx(auVar37,auVar19);
 LAB_14043b4e3:
                           auVar17 = vsubss_avx(auVar17,auVar31);
                           uVar10 = 0x73;
@@ -284,9 +295,9 @@ LAB_14043b4e3:
             else {
               uVar15 = ((ulonglong)param_1[0x27e] >> 0x29 & 1) == 0;
               if ((bool)uVar15) {
-                iVar7 = (**(code **)(*param_1 + 0x750))(param_1,auVar37._0_8_);
+                iVar7 = (**(code **)(*param_1 + 0x750))(param_1,auVar39._0_8_);
                 auVar27._8_24_ = extraout_var_06;
-                auVar27._0_8_ = extraout_XMM0_Qa_04;
+                auVar27._0_8_ = extraout_XMM0_Qa_05;
                 auVar19 = auVar27._0_16_;
                 uVar14 = 0;
                 uVar15 = iVar7 == 0;
@@ -315,14 +326,16 @@ LAB_14043b515:
             if (bVar16) {
               auVar34 = vaddss_avx(auVar34,ZEXT416(0x3e800000));
             }
+            uVar8 = auVar34._0_8_;
             vucomiss_avx(auVar34,auVar33);
             if (((uVar9 & 1) == 0) || (bVar16)) {
-              auVar34 = vsubss_avx(auVar36,auVar34);
+              auVar34 = vsubss_avx(auVar37,auVar34);
+              uVar8 = auVar34._0_8_;
               auVar19 = vmulss_avx(auVar19,auVar34);
             }
-            iVar7 = (**(code **)(*param_1 + 0x290))(param_1);
+            iVar7 = (**(code **)(*param_1 + 0x290))(uVar8);
             auVar25._8_24_ = extraout_var_04;
-            auVar25._0_8_ = extraout_XMM0_Qa_03;
+            auVar25._0_8_ = extraout_XMM0_Qa_04;
             uVar14 = 0;
             uVar15 = iVar7 == 0;
             if (!(bool)uVar15) {
@@ -331,7 +344,7 @@ LAB_14043b515:
             auVar34 = vcomiss_avx(auVar33);
             auVar19 = auVar25._0_16_;
             if (!(bool)uVar15) {
-              auVar19 = vmulss_avx(auVar34,auVar37);
+              auVar19 = vmulss_avx(auVar34,auVar39);
               auVar17 = vsubss_avx(auVar17,auVar19);
             }
           }
@@ -350,21 +363,23 @@ LAB_14043b515:
     }
 LAB_14043b51d:
     auVar34 = vxorps_avx(auVar19,auVar19);
-    auVar34 = vmovss_avx(auVar34,auVar17);
-    auVar34 = vmaxss_avx(auVar34,auVar33);
-    auVar30._0_8_ = (**(code **)(*param_1 + 0x340))(param_1);
+    auVar19 = vmovss_avx(auVar34,auVar17);
+    auVar34 = vmaxss_avx(auVar19,auVar33);
+    auVar30._0_8_ =
+         (**(code **)(*param_1 + 0x340))
+                   (param_1,auVar17._0_8_,auVar33._0_8_,auVar19._0_8_,auVar38,auVar36);
     auVar30._8_24_ = extraout_var_09;
-    auVar17 = vxorps_avx(auVar17,auVar17);
-    auVar17 = vmovss_avx(auVar17,auVar30._0_16_);
+    auVar36 = vxorps_avx(auVar17,auVar17);
+    auVar36 = vmovss_avx(auVar36,auVar30._0_16_);
     vmovss_avx(0x3a83126f);
-    auVar17 = vminss_avx(auVar34,auVar17);
-    vcomiss_avx(auVar17);
+    auVar36 = vminss_avx(auVar34,auVar36);
+    vcomiss_avx(auVar36);
     if ((!(bool)uVar14 && !(bool)uVar15) &&
        (auVar32 = vcomiss_avx(auVar33), !(bool)uVar14 && !(bool)uVar15)) {
       uVar10 = 0;
       auVar32 = auVar33;
     }
-    uVar1 = vmovss_avx(auVar17);
+    uVar1 = vmovss_avx(auVar36);
     *(undefined4 *)(param_1[0x2a2] + 8) = uVar1;
     uVar1 = vmovss_avx(auVar32);
     *(undefined4 *)((longlong)param_1 + 0x14c4) = uVar1;

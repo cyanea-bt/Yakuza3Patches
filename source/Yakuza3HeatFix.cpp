@@ -49,8 +49,8 @@ namespace HeatFix {
 	static uintptr_t pIsCombatFinished = 0;
 	static uintptr_t isCombatFinished = 0;
 
-	static uint32_t unknownCondition = 0; // No clue when this one is != 0
-	static uint32_t IsCombatInTransition = 0; // Seems to be != 0 during combat intro or when fading to black after the player dies
+	static uint32_t isCombatPausedByTutorial = 0;
+	static uint32_t isCombatInTransition = 0; 
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		// MOV  param_1,qword ptr [DAT_14122cde8]
@@ -66,15 +66,15 @@ namespace HeatFix {
 
 		// MOV  RBX,param_1
 		// TEST dword ptr [RBX + 0x13d8],0x10000
-		unknownCondition = *(uint32_t *)(param1 + 0x13d8);
-		unknownCondition &= 0x10000;
+		isCombatPausedByTutorial = *(uint32_t *)(param1 + 0x13d8);
+		isCombatPausedByTutorial &= 0x10000; // Seems to be != 0 if combat is still active but is "paused" by a tutorial popup message
 
 		// MOV  RBX,param_1
 		// MOV  RCX,qword ptr [RBX + 0x13d0]
 		// TEST dword ptr [RCX + 0x354],0x4000000
 		uintptr_t pIsCombatInTransition = *(uintptr_t *)(param1 + 0x13d0);
-		IsCombatInTransition = *(uint32_t *)(pIsCombatInTransition + 0x354);
-		IsCombatInTransition &= 0x4000000;
+		isCombatInTransition = *(uint32_t *)(pIsCombatInTransition + 0x354);
+		isCombatInTransition &= 0x4000000; // Seems to be != 0 during combat intro or when fading to black after the player dies
 
 		if (s_Debug) {
 			if (!ofs1.is_open() && !logFailed) {
@@ -90,8 +90,8 @@ namespace HeatFix {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
 				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				dbg_msg = format("- TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - unknownCondition: {:d} - IsActorDead: {:d} - IsCombatInTransition: {:d} - isCombatFinished: {:d}", 
-					str_TzNow, IsPlayerInCombat(), IsCombatInactive(), unknownCondition, IsActorDead(param1), IsCombatInTransition, isCombatFinished);
+				dbg_msg = format("- TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}", 
+					str_TzNow, IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
 				ofs1 << "PatchedHeatFunc: " << dbg_Counter1++ << dbg_msg << endl;
 				if (counter % 2 == 0) {
 					ofs2 << "OrigHeatFunc: " << dbg_Counter2++ << dbg_msg << endl;
@@ -103,7 +103,7 @@ namespace HeatFix {
 			counter = 0;
 			return; // HeatUpdate() will return immediately in this case, so we just skip calling it
 		}
-		if (counter == 1 && (IsCombatInactive() || unknownCondition || IsActorDead(param1) || IsCombatInTransition || isCombatFinished)) {
+		else if (counter == 1 && (IsCombatInactive() || isCombatPausedByTutorial || IsActorDead(param1) || isCombatInTransition || isCombatFinished)) {
 			if (s_Debug) {
 				if (ofs2.is_open()) {
 					ofs2 << "Fast HeatUpdate: " << dbg_Counter2++ << dbg_msg << endl;
