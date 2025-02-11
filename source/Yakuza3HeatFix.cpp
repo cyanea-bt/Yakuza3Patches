@@ -146,22 +146,57 @@ void OnInitializeHook()
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 	ofstream ofs = ofstream("Yakuza3HeatFix.txt", ios::binary | ios::trunc | ios::out);
+
+	// Game/window name taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
+	enum class Game
+	{
+		Yakuza3,
+		Yakuza4,
+		Yakuza5, // Unsupported for now
+	} game;
+	{
+		// "4C 8D 05 ?? ?? ?? ?? 48 8B 15 ?? ?? ?? ?? 33 DB"
+		auto gameWindowName = pattern("4C 8D 05 ? ? ? ? 48 8B 15 ? ? ? ? 33 DB").count_hint(1);
+		if (gameWindowName.size() == 1)
+		{
+			// Read the window name from the pointer
+			void *match = gameWindowName.get_first(3);
+
+			const char *windowName;
+			ReadOffsetValue(match, windowName);
+			game = windowName == std::string_view("Yakuza 4") ? Game::Yakuza4 : Game::Yakuza3;
+		}
+		else
+		{
+			// Not found? Most likely Yakuza 5
+			// Not supported yet
+			game = Game::Yakuza5;
+		}
+	}
+
 	// Check if patch should be disabled
 	{
 		namespace fs = std::filesystem;
+		fs::path manualEnable1("Yakuza3HeatFix.Enable");
+		fs::path manualEnable2("Yakuza3HeatFix.Enable.txt");
 		fs::path manualDisable1("Yakuza3HeatFix.Disable");
-		fs::path manualDisable2("Yakuza3HeatFix.disable");
-		fs::path manualDisable3("Yakuza3HeatFix.Disable.txt");
-		fs::path manualDisable4("Yakuza3HeatFix.disable.txt");
-		if (fs::exists(manualDisable1) || fs::exists(manualDisable2) || fs::exists(manualDisable3) || fs::exists(manualDisable4)) {
-			using namespace std::chrono;
+		fs::path manualDisable2("Yakuza3HeatFix.Disable.txt");
 
+		const bool cond1 = (game != Game::Yakuza3 && !fs::exists(manualEnable1) && !fs::exists(manualEnable2));
+		const bool cond2 = (fs::exists(manualDisable1) || fs::exists(manualDisable2));
+		if (cond1 || cond2) {
 			if (ofs.is_open()) {
+				using namespace std::chrono;
 				const auto utcNow = system_clock::now();
 				const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
 				const auto tzNow = HeatFix::tz->to_local(utcNow);
 				const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-				ofs << "HeatFix was disabled!" << endl;
+				if (game != Game::Yakuza3) {
+					ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
+				}
+				else {
+					ofs << "HeatFix was disabled!" << endl;
+				}
 				ofs << "Local: " << str_TzNow << endl;
 				ofs << "UTC:   " << str_UtcNow << endl;
 			}
