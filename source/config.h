@@ -2,5 +2,9 @@
 
 
 namespace config {
-	std::string loadConfig();
+	struct Config {
+		bool Enable = true;
+	};
+
+	Config loadConfig();
 }
