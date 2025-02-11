@@ -14,6 +14,7 @@
 #include "Utils/MemoryMgr.h"
 #include "Utils/Trampoline.h"
 #include "Utils/Patterns.h"
+#include "config.h"
 
 #if _DEBUG
 static constexpr bool s_Debug = true;
@@ -310,6 +311,7 @@ void OnInitializeHook()
 			ofs << "Hook done!" << endl;
 			ofs << format("ASI Path is \"{:s}\"", get_module_path(get_module_path).string()) << endl;
 			ofs << format("ASI Dir is \"{:s}\"", get_module_path(get_module_path).parent_path().string()) << endl;
+			ofs << format("Config: \"{:s}\"", config::loadConfig()) << endl;
 			ofs << "Local: " << str_TzNow << endl;
 			ofs << "UTC:   " << str_UtcNow << endl;
 		}

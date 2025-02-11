@@ -7,7 +7,7 @@ project "Yakuza3HeatFix"
 	language "C++"
 
 	include "source/VersionInfo.lua"
-	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.*", "**/HookInit.hpp" }
+	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.*", "**/HookInit.hpp", "**/json.hpp", "**/json_fwd.hpp" }
 
 
 workspace "*"
