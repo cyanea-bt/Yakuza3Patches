@@ -137,6 +137,30 @@ namespace HeatFix {
 	}
 }
 
+// Get real path to .asi file, since the working dir will be the dir of Yakuza3.exe
+// and that won't match the .asi file's path if it is loaded from inside the "mods" subdirectory
+// ref: https://gist.github.com/pwm1234/05280cf2e462853e183d
+//      https://stackoverflow.com/questions/6924195/get-dll-path-at-runtime
+static std::filesystem::path get_module_path(void *address)
+{
+	WCHAR path[MAX_PATH];
+	HMODULE hm = NULL;
+
+	if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+		GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+		(LPCWSTR)address,
+		&hm))
+	{
+		std::ostringstream oss;
+		oss << "GetModuleHandle returned " << GetLastError();
+		throw std::runtime_error(oss.str());
+	}
+	GetModuleFileNameW(hm, path, MAX_PATH);
+
+	std::wstring p(path);
+	return std::filesystem::path(p);
+}
+
 
 void OnInitializeHook()
 {
@@ -284,6 +308,8 @@ void OnInitializeHook()
 			const auto tzNow = HeatFix::tz->to_local(utcNow);
 			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
 			ofs << "Hook done!" << endl;
+			ofs << format("ASI Path is \"{:s}\"", get_module_path(get_module_path).string()) << endl;
+			ofs << format("ASI Dir is \"{:s}\"", get_module_path(get_module_path).parent_path().string()) << endl;
 			ofs << "Local: " << str_TzNow << endl;
 			ofs << "UTC:   " << str_UtcNow << endl;
 		}
