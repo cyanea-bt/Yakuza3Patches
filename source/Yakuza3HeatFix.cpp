@@ -278,14 +278,17 @@ void OnInitializeHook()
 	// log current time to file to get some feedback once hook is done
 	{
 		using namespace std::chrono;
+		using namespace config;
 
 		if (ofs.is_open()) {
 			const auto utcNow = system_clock::now();
 			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
 			const auto tzNow = HeatFix::tz->to_local(utcNow);
 			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+			const Config conf = loadConfig();
+			ofs << format("Config path: \"{:s}\"", conf.path) << endl;
+			ofs << format("Enable: {}", conf.Enable) << endl;
 			ofs << "Hook done!" << endl;
-			ofs << format("Enable: \"{}\"", config::loadConfig().Enable) << endl;
 			ofs << "Local: " << str_TzNow << endl;
 			ofs << "UTC:   " << str_UtcNow << endl;
 		}

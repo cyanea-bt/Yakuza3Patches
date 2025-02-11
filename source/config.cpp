@@ -87,6 +87,7 @@ namespace config {
 			}
 			ifs.close();
 			ofs.close();
+			conf.path = configPath.string();
 			return conf;
 		}
 		catch (const exception &err) {
