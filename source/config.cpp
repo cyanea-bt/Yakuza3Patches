@@ -1,3 +1,4 @@
+#include <iostream>
 #include <filesystem>
 #include <fstream>
 #include "nlohmann/json.hpp"
@@ -45,10 +46,12 @@ namespace config {
 	void to_json(json &j, const Config &e) {
 		j = json();
 		j["Enable"] = e.Enable;
+		j["Force"] = e.Force;
 	}
 
 	void from_json(const json &j, Config &e) {
 		j.at("Enable").get_to(e.Enable);
+		j.at("Force").get_to(e.Force);
 	}
 
 	// write prettified JSON to ostream
@@ -93,7 +96,9 @@ namespace config {
 		catch (const exception &err) {
 			ifs.close();
 			ofs.close();
-			throw err;
+			//throw err;
+			cerr << err.what();
+			return Config();
 		}
 	}
 }
