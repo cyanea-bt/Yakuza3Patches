@@ -178,28 +178,26 @@ void OnInitializeHook()
 	}
 
 	// Check if patch should be disabled
-	{
-		if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
-			if (ofs.is_open()) {
-				using namespace std::chrono;
-				const auto utcNow = system_clock::now();
-				const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-				const auto tzNow = HeatFix::tz->to_local(utcNow);
-				const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-				if (game != Game::Yakuza3) {
-					ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
-				}
-				else {
-					ofs << "HeatFix was disabled!" << endl;
-				}
-				if (s_Debug) {
-					ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
-				}
-				ofs << "Local: " << str_TzNow << endl;
-				ofs << "UTC:   " << str_UtcNow << endl;
+	if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
+		if (ofs.is_open()) {
+			using namespace std::chrono;
+			const auto utcNow = system_clock::now();
+			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
+			const auto tzNow = HeatFix::tz->to_local(utcNow);
+			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+			if (game != Game::Yakuza3) {
+				ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
 			}
-			return;
+			else {
+				ofs << "HeatFix was disabled!" << endl;
+			}
+			if (s_Debug) {
+				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
+			}
+			ofs << "Local: " << str_TzNow << endl;
+			ofs << "UTC:   " << str_UtcNow << endl;
 		}
+		return;
 	}
 
 	// Hook/Redirect the game's HeatUpdate function to our own function.
@@ -273,20 +271,17 @@ void OnInitializeHook()
 	}
 
 	// log current time to file to get some feedback once hook is done
-	{
+	if (ofs.is_open()) {
 		using namespace std::chrono;
-
-		if (ofs.is_open()) {
-			const auto utcNow = system_clock::now();
-			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-			const auto tzNow = HeatFix::tz->to_local(utcNow);
-			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-			ofs << "Hook done!" << endl;
-			if (s_Debug) {
-				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
-			}
-			ofs << "Local: " << str_TzNow << endl;
-			ofs << "UTC:   " << str_UtcNow << endl;
+		const auto utcNow = system_clock::now();
+		const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
+		const auto tzNow = HeatFix::tz->to_local(utcNow);
+		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+		ofs << "Hook done!" << endl;
+		if (s_Debug) {
+			ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
 		}
+		ofs << "Local: " << str_TzNow << endl;
+		ofs << "UTC:   " << str_UtcNow << endl;
 	}
 }

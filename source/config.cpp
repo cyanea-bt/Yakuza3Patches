@@ -13,8 +13,8 @@
 #include <ShlObj.h>
 
 
-// Get real path to .asi file, since the working dir will be the dir of Yakuza3.exe
-// and that won't match the .asi file's path if it is loaded from inside the "mods" subdirectory
+// Get real path to .asi file, since the working dir will be the dir of the .exe that loaded it.
+// And that won't match the .asi file's path if it is loaded from inside the "mods" subdirectory.
 // ref: https://gist.github.com/pwm1234/05280cf2e462853e183d
 //      https://stackoverflow.com/questions/6924195/get-dll-path-at-runtime
 static std::filesystem::path get_module_path(void *address)
@@ -71,9 +71,9 @@ namespace config {
 	Config loadConfig() {
 		ifstream ifs;
 		ofstream ofs;
-		fs::path configPath(rsc_Name + string(".json"));
+		fs::path configPath(format("{:s}{:s}", rsc_Name, ".json"));
 		if (!fs::exists(configPath)) {
-			fs::path asiDir = get_module_path(get_module_path).parent_path();
+			const fs::path asiDir = get_module_path(get_module_path).parent_path();
 			configPath = fs::path(asiDir / configPath.filename());
 		}
 		
@@ -89,7 +89,7 @@ namespace config {
 			else {
 				// read existing config
 				ifs = ifstream(configPath, ios::in | ios::binary);
-				json data = json::parse(ifs);
+				const json data = json::parse(ifs);
 				ifs.close();
 				
 				uint32_t version = 0;
@@ -102,7 +102,13 @@ namespace config {
 				}
 				else {
 					// replace outdated config with new defaults
-					fs::remove(configPath);
+					const fs::path defaultBakPath(format("{:s}{:s}", configPath.string(), ".bak"));
+					fs::path bakPath(defaultBakPath);
+					int bakCounter = 1;
+					while (fs::exists(bakPath)) {
+						bakPath = fs::path(format("{:s}{:d}", defaultBakPath.string(), bakCounter++));
+					}
+					fs::rename(configPath, bakPath);
 					ofs = ofstream(configPath, ios::out | ios::binary | ios::trunc);
 					writeJson(ofs, defaults);
 					conf = defaults;
