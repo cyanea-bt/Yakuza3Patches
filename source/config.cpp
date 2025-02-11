@@ -41,15 +41,17 @@ static std::filesystem::path get_module_path(void *address)
 namespace config {
 	using namespace std;
 	namespace fs = std::filesystem;
-	using json = nlohmann::json;
+	using json = nlohmann::ordered_json;
 
 	void to_json(json &j, const Config &e) {
 		j = json();
+		j["Version"] = e.Version;
 		j["Enable"] = e.Enable;
 		j["Force"] = e.Force;
 	}
 
 	void from_json(const json &j, Config &e) {
+		j.at("Version").get_to(e.Version);
 		j.at("Enable").get_to(e.Enable);
 		j.at("Force").get_to(e.Force);
 	}
@@ -75,30 +77,44 @@ namespace config {
 			configPath = fs::path(asiDir / configPath.filename());
 		}
 		
+		Config defaults = Config();
 		try {
 			Config conf;
 			if (!fs::exists(configPath)) {
 				// create default config next to .asi file
-				conf = Config();
 				ofs = ofstream(configPath, ios::out | ios::binary | ios::trunc);
-				writeJson(ofs, conf);
+				writeJson(ofs, defaults);
+				conf = defaults;
 			}
 			else {
 				// read existing config
 				ifs = ifstream(configPath, ios::in | ios::binary);
-				conf = json::parse(ifs);
+				json data = json::parse(ifs);
+				ifs.close();
+				
+				uint32_t version = 0;
+				if (data.contains("Version")) {
+					version = data["Version"];
+				}
+				if (version == defaults.Version) {
+					// config version matches, should be able to parse
+					conf = data;
+				}
+				else {
+					// replace outdated config with new defaults
+					fs::remove(configPath);
+					ofs = ofstream(configPath, ios::out | ios::binary | ios::trunc);
+					writeJson(ofs, defaults);
+					conf = defaults;
+				}
 			}
-			ifs.close();
-			ofs.close();
 			conf.path = configPath.string();
 			return conf;
 		}
 		catch (const exception &err) {
-			ifs.close();
-			ofs.close();
 			//throw err;
 			cerr << err.what();
-			return Config();
+			return defaults;
 		}
 	}
 }
