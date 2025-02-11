@@ -14,6 +14,7 @@
 #include "Utils/MemoryMgr.h"
 #include "Utils/Trampoline.h"
 #include "Utils/Patterns.h"
+#include "config.h"
 
 #if _DEBUG
 static constexpr bool s_Debug = true;
@@ -143,8 +144,10 @@ void OnInitializeHook()
 	using namespace std;
 	using namespace Memory;
 	using namespace hook;
+	using namespace config;
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
+	const Config config = loadConfig();
 	ofstream ofs = ofstream("Yakuza3HeatFix.txt", ios::binary | ios::trunc | ios::out);
 
 	// Game/window name taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
@@ -175,33 +178,26 @@ void OnInitializeHook()
 	}
 
 	// Check if patch should be disabled
-	{
-		namespace fs = std::filesystem;
-		fs::path manualEnable1("Yakuza3HeatFix.Enable");
-		fs::path manualEnable2("Yakuza3HeatFix.Enable.txt");
-		fs::path manualDisable1("Yakuza3HeatFix.Disable");
-		fs::path manualDisable2("Yakuza3HeatFix.Disable.txt");
-
-		const bool cond1 = (game != Game::Yakuza3 && !fs::exists(manualEnable1) && !fs::exists(manualEnable2));
-		const bool cond2 = (fs::exists(manualDisable1) || fs::exists(manualDisable2));
-		if (cond1 || cond2) {
-			if (ofs.is_open()) {
-				using namespace std::chrono;
-				const auto utcNow = system_clock::now();
-				const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-				const auto tzNow = HeatFix::tz->to_local(utcNow);
-				const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-				if (game != Game::Yakuza3) {
-					ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
-				}
-				else {
-					ofs << "HeatFix was disabled!" << endl;
-				}
-				ofs << "Local: " << str_TzNow << endl;
-				ofs << "UTC:   " << str_UtcNow << endl;
+	if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
+		if (ofs.is_open()) {
+			using namespace std::chrono;
+			const auto utcNow = system_clock::now();
+			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
+			const auto tzNow = HeatFix::tz->to_local(utcNow);
+			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+			if (game != Game::Yakuza3) {
+				ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
 			}
-			return;
+			else {
+				ofs << "HeatFix was disabled!" << endl;
+			}
+			if (s_Debug) {
+				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
+			}
+			ofs << "Local: " << str_TzNow << endl;
+			ofs << "UTC:   " << str_UtcNow << endl;
 		}
+		return;
 	}
 
 	// Hook/Redirect the game's HeatUpdate function to our own function.
@@ -275,17 +271,17 @@ void OnInitializeHook()
 	}
 
 	// log current time to file to get some feedback once hook is done
-	{
+	if (ofs.is_open()) {
 		using namespace std::chrono;
-
-		if (ofs.is_open()) {
-			const auto utcNow = system_clock::now();
-			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-			const auto tzNow = HeatFix::tz->to_local(utcNow);
-			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-			ofs << "Hook done!" << endl;
-			ofs << "Local: " << str_TzNow << endl;
-			ofs << "UTC:   " << str_UtcNow << endl;
+		const auto utcNow = system_clock::now();
+		const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
+		const auto tzNow = HeatFix::tz->to_local(utcNow);
+		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
+		ofs << "Hook done!" << endl;
+		if (s_Debug) {
+			ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
 		}
+		ofs << "Local: " << str_TzNow << endl;
+		ofs << "UTC:   " << str_UtcNow << endl;
 	}
 }
