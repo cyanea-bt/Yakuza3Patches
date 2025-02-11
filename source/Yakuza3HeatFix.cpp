@@ -187,12 +187,14 @@ void OnInitializeHook()
 				const auto tzNow = HeatFix::tz->to_local(utcNow);
 				const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
 				if (game != Game::Yakuza3) {
-					ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl << endl;
+					ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
 				}
 				else {
-					ofs << "HeatFix was disabled!" << endl << endl;
+					ofs << "HeatFix was disabled!" << endl;
 				}
-				ofs << format("Config path: \"{:s}\"", config.path) << endl;
+				if (s_Debug) {
+					ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
+				}
 				ofs << "Local: " << str_TzNow << endl;
 				ofs << "UTC:   " << str_UtcNow << endl;
 			}
@@ -279,8 +281,10 @@ void OnInitializeHook()
 			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
 			const auto tzNow = HeatFix::tz->to_local(utcNow);
 			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-			ofs << "Hook done!" << endl << endl;
-			ofs << format("Config path: \"{:s}\"", config.path) << endl;
+			ofs << "Hook done!" << endl;
+			if (s_Debug) {
+				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
+			}
 			ofs << "Local: " << str_TzNow << endl;
 			ofs << "UTC:   " << str_UtcNow << endl;
 		}
