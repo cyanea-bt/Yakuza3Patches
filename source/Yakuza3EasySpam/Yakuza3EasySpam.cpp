@@ -61,14 +61,14 @@ namespace EasySpam {
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
 	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
-	static uint8_t PatchedIncThrowResistance(uintptr_t param1) {
+	static uint8_t PatchedIncThrowResistance(uint8_t param1) {
 		if (s_Debug) {
 			if (ofs1.is_open()) {
 				ofs1 << format("PatchedIncThrowResistance - TzNow: {:s} - {:d} - param1: {:d}", getTzString_ms(), dbg_Counter1++, param1) << endl;
 			}
 		}
 
-		return 1;
+		return ++param1;
 	}
 
 	// param1 here is a pointer to the actor object of the enemy that the player is trying to throw
@@ -340,11 +340,11 @@ void OnInitializeHook()
 			Nop(incAddr, 8);
 
 			// Again, just wanted to see if this would work
+			// Now works the same as the vanilla game, just with an added function call before saving the incremented value to memory
 			const uint8_t payload[] = {
-				0x52, // push rdx
-				0x48, 0x89, 0xca, // mov rdx, rcx
 				0x51, // push rcx
-				0x48, 0x89, 0xd1, // mov rcx, rdx
+				0x52, // push rdx
+				0x48, 0x89, 0xc1, // mov rcx, rax
 				0x41, 0x50, // push r8
 				0x41, 0x51, // push r9
 				0x41, 0x52, // push r10
@@ -355,8 +355,8 @@ void OnInitializeHook()
 				0x41, 0x5a, // pop r10
 				0x41, 0x59, // pop r9
 				0x41, 0x58, // pop r8
-				0x59, // pop rcx
 				0x5a, // pop rdx
+				0x59, // pop rcx
 				0x88, 0x81, 0xba, 0x1c, 0x00, 0x00, // MOV byte ptr[RCX + 0x1cba],AL
 				0xe9, 0x00, 0x00, 0x00, 0x00 // JMP retAddr
 			};
@@ -365,9 +365,9 @@ void OnInitializeHook()
 			memcpy(space, payload, sizeof(payload));
 
 			LPVOID funcAddr = GetFuncAddr(PatchedIncThrowResistance);
-			memcpy(space + 1 + 3 + 1 + 3 + 8 + 2, &funcAddr, sizeof(funcAddr));
+			memcpy(space + 2 + 3 + 8 + 2, &funcAddr, sizeof(funcAddr));
 
-			WriteOffsetValue(space + 1 + 3 + 1 + 3 + 8 + 10 + 12 + 6 + 1, retAddr);
+			WriteOffsetValue(space + 2 + 3 + 8 + 10 + 12 + 6 + 1, retAddr);
 
 			InjectHook(incAddr, space, PATCH_JUMP);
 		}
