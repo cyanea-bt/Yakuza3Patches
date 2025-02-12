@@ -1,4 +1,4 @@
-workspace "Yakuza3HeatFix"
+workspace "Yakuza3Patches"
 	platforms { "Win64" }
 
 project "Yakuza3HeatFix"
@@ -6,20 +6,41 @@ project "Yakuza3HeatFix"
 	targetextension ".asi"
 	language "C++"
 
-	include "source/VersionInfo.lua"
-	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.*", "**/HookInit.hpp", "**/json.hpp", "**/json_fwd.hpp" }
+	defines { 
+	    "rsc_FullName=\"Yakuza3HeatFix\"",
+	    "rsc_MajorVersion=0",
+	    "rsc_MinorVersion=0",
+	    "rsc_RevisionID=1",
+	    "rsc_BuildID=0",
+	}
+
+project "Yakuza3EasySpam"
+	kind "SharedLib"
+	targetextension ".asi"
+	language "C++"
+
+	defines { 
+	    "rsc_FullName=\"Yakuza3EasySpam\"",
+	    "rsc_MajorVersion=0",
+	    "rsc_MinorVersion=0",
+	    "rsc_RevisionID=1",
+	    "rsc_BuildID=0",
+	}
 
 
 workspace "*"
 	configurations { "Debug", "Release", "Master" }
 	location "build"
 
-	vpaths { ["Headers/*"] = "source/**.h",
-			["Sources/*"] = { "source/**.c", "source/**.cpp" },
-			["Resources"] = "source/**.rc"
+	vpaths { 
+		["Headers/*"] = "source/**.h",
+		["Sources/*"] = { "source/**.c", "source/**.cpp" },
+		["Resources"] = "source/**.rc"
 	}
 
-	files { "source/*.h", "source/*.cpp", "source/resources/*.rc" }
+	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.cpp", "**/Patterns.h", "**/HookInit.hpp", "**/json.hpp", "**/json_fwd.hpp" }
+	files { "source/*.h", "source/*.cpp", "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/resources/*.rc" }
+	includedirs { "source" }
 
 	-- Disable exceptions in WIL
 	defines { "WIL_SUPPRESS_EXCEPTIONS" }
@@ -30,18 +51,23 @@ workspace "*"
 	warnings "Extra"
 
 	-- Automated defines for resources
-	defines { "rsc_Extension=\"%{prj.targetextension}\"",
-			"rsc_Name=\"%{prj.name}\"" }
+	defines { 
+		"rsc_Extension=\"%{prj.targetextension}\"",
+		"rsc_Name=\"%{prj.name}\"",
+		"rsc_Repository=\"https://github.com/cyanea-bt/Yakuza3HeatFix\"",
+		"rsc_UpdateURL=\"https://github.com/cyanea-bt/Yakuza3HeatFix/releases\"",
+		"rsc_Copyright=\"2025 cyanea-bt\""
+	}
 
 filter "configurations:Debug"
-	defines { "DEBUG" }
+	defines { "DEBUG", "_DEBUG" }
 	runtime "Debug"
 
  filter "configurations:Master"
-	defines { "NDEBUG" }
 	symbols "Off"
 
 filter "configurations:not Debug"
+	defines { "NDEBUG", "_NDEBUG" }
 	optimize "Speed"
 	functionlevellinking "on"
 	linktimeoptimization "on"
