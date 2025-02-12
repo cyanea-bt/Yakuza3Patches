@@ -1,0 +1,2 @@
+In PowerShell:
+(dir *.asi).VersionInfo|fl
