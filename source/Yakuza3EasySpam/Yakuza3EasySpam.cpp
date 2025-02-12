@@ -339,25 +339,50 @@ void OnInitializeHook()
 			// 0x88, 0x81, 0xba, 0x1c, 0x00, 0x00 (MOV byte ptr[RCX + 0x1cba],AL)
 			Nop(incAddr, 8);
 
-			// Again, just wanted to see if this would work
-			// Now works the same as the vanilla game, just with an added function call before saving the incremented value to memory
+			/*
+			* Inject call to our function in order to modify enemy throw resistance.
+			* Now - it is obviously entirely unnecessary to inject a function call here,
+			* since we can simply change the contents of RAX in assembly before writing them to memory.
+			* But I like being able to write a log message whenever the game hits that code.
+			* 
+			* Maybe I'm being dumb but I see no other way to inject a call to our function
+			* while guaranteeing that the contents of all registers will stay the same. Basically:
+			* - JMP to our payload
+			* - back up volatile registers RCX, RDX, R8, R9, R10, R11 (no need to back up RAX here)
+			* - load address of our function into RAX
+			* - reserve 32 bytes of shadow space (otherwise our register backups on the stack could be overwritten by the callee)
+			* - call our function
+			* - restore RSP and RCX, RDX, R8, R9, R10, R11
+			* - write return value of our function to memory (i.e. overwriting the old throw resistance value)
+			* - JMP back to the next instruction after our injected JMP
+			* 
+			* Had to do some reading for this one, since I didn't know about the importance of the shadow space
+			* and that kept messing up the register backup stored on top of the stack.
+			* https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
+			* https://learn.microsoft.com/en-us/cpp/build/prolog-and-epilog?view=msvc-170
+			* https://g3tsyst3m.github.io/shellcoding/assembly/debugging/x64-Assembly-&-Shellcoding-101/
+			* https://vimalshekar.github.io/reverse-engg/Assembly-Basics-Part11
+			* https://medium.com/@sruthk/cracking-assembly-function-prolog-and-epilog-in-x64-ea1bdc50514c
+			*/
 			const uint8_t payload[] = {
 				0x51, // push rcx
 				0x52, // push rdx
-				0x48, 0x89, 0xc1, // mov rcx, rax
+				0x48, 0x89, 0xc1, // mov rcx, rax (copy current throw resistance to param1 for our function)
 				0x41, 0x50, // push r8
 				0x41, 0x51, // push r9
 				0x41, 0x52, // push r10
 				0x41, 0x53, // push r11
 				0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, PatchedIncThrowResistance
+				0x48, 0x83, 0xec, 0x20, // sub rsp, 0x20 (reserve shadow space for callee)
 				0xff, 0xd0, // call rax
+				0x48, 0x83, 0xc4, 0x20, // add rsp, 0x20 ("unreserve" shadow space)
 				0x41, 0x5b, // pop r11
 				0x41, 0x5a, // pop r10
 				0x41, 0x59, // pop r9
 				0x41, 0x58, // pop r8
 				0x5a, // pop rdx
 				0x59, // pop rcx
-				0x88, 0x81, 0xba, 0x1c, 0x00, 0x00, // MOV byte ptr[RCX + 0x1cba],AL
+				0x88, 0x81, 0xba, 0x1c, 0x00, 0x00, // MOV byte ptr[RCX + 0x1cba],AL (write return value to memory)
 				0xe9, 0x00, 0x00, 0x00, 0x00 // JMP retAddr
 			};
 
@@ -367,8 +392,7 @@ void OnInitializeHook()
 			LPVOID funcAddr = GetFuncAddr(PatchedIncThrowResistance);
 			memcpy(space + 2 + 3 + 8 + 2, &funcAddr, sizeof(funcAddr));
 
-			WriteOffsetValue(space + 2 + 3 + 8 + 10 + 12 + 6 + 1, retAddr);
-
+			WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 			InjectHook(incAddr, space, PATCH_JUMP);
 		}
 	}
