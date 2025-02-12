@@ -27,6 +27,7 @@ namespace EasySpam {
 	using namespace std;
 	using namespace std::chrono;
 	static const auto tz = current_zone();
+	static constexpr string_view tzFmt("{:%Y/%m/%d %H:%M:%S}");
 	static ofstream ofs1, ofs2, ofs3, ofs4;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
 	static string dbg_msg;
@@ -34,6 +35,7 @@ namespace EasySpam {
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
 	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
+	// param1 here is a pointer to the actor object of the enemy that the player is trying to throw
 	static uint8_t PatchedGetEnemyThrowResistance(uintptr_t param1) {
 		// CALL qword ptr[param_1 + 0xb40]
 		uintptr_t pGetEnemyThrowResistance = *(uintptr_t *)(param1);
@@ -42,7 +44,10 @@ namespace EasySpam {
 
 		const uint8_t origThrowRes = orig(param1);
 		uint8_t easyThrowRes = origThrowRes / 2;
-		if (origThrowRes > 0 && easyThrowRes == 0) {
+		if (easyThrowRes == 0) {
+			// 0 and 1 will do the same, since the player's keypress counter is incremented to 1 before this function is called the first time.
+			// Only reason I'm forcing easyThrowRes to 1 here, is to be on the safe side if this is ever called by another function that I'm not aware of.
+			// (In case that hypothetical function expects a non-zero value as return)
 			easyThrowRes++;
 		}
 
@@ -53,7 +58,7 @@ namespace EasySpam {
 			if (ofs1.is_open()) {
 				const auto utcNow = system_clock::now();
 				const auto tzNow = tz->to_local(utcNow);
-				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
+				const string str_TzNow = format(tzFmt, tzNow);
 				ofs1 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", str_TzNow, dbg_Counter1++, origThrowRes, easyThrowRes) << endl;
 			}
 		}
