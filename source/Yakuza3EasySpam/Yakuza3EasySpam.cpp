@@ -61,6 +61,16 @@ namespace EasySpam {
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
 	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
+	static uint8_t PatchedIncThrowResistance(uintptr_t param1) {
+		if (s_Debug) {
+			if (ofs1.is_open()) {
+				ofs1 << format("PatchedIncThrowResistance - TzNow: {:s} - {:d} - param1: {:d}", getTzString_ms(), dbg_Counter1++, param1) << endl;
+			}
+		}
+
+		return 1;
+	}
+
 	// param1 here is a pointer to the actor object of the enemy that the player is trying to throw
 	static uint8_t PatchedGetEnemyThrowResistance(uintptr_t param1) {
 		// CALL qword ptr[param_1 + 0xb40]
@@ -201,6 +211,16 @@ namespace HeatFix {
 }
 
 
+// Can't seem to get the correct function address at runtime without this
+// ref: Utils/Trampoline.h
+template<typename Func>
+LPVOID GetFuncAddr(Func func)
+{
+	LPVOID addr;
+	memcpy(&addr, std::addressof(func), sizeof(addr));
+	return addr;
+}
+
 void OnInitializeHook()
 {
 	using namespace std;
@@ -319,18 +339,36 @@ void OnInitializeHook()
 			// 0x88, 0x81, 0xba, 0x1c, 0x00, 0x00 (MOV byte ptr[RCX + 0x1cba],AL)
 			Nop(incAddr, 8);
 
-			// There's no reason to increment and then decrement right after
-			// Just wanted to see if this would work
+			// Again, just wanted to see if this would work
 			const uint8_t payload[] = {
-				0xfe, 0xc0, // INC AL
-				0xfe, 0xc8, // DEC AL
+				0x52, // push rdx
+				0x48, 0x89, 0xca, // mov rdx, rcx
+				0x51, // push rcx
+				0x48, 0x89, 0xd1, // mov rcx, rdx
+				0x41, 0x50, // push r8
+				0x41, 0x51, // push r9
+				0x41, 0x52, // push r10
+				0x41, 0x53, // push r11
+				0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, PatchedIncThrowResistance
+				0xff, 0xd0, // call rax
+				0x41, 0x5b, // pop r11
+				0x41, 0x5a, // pop r10
+				0x41, 0x59, // pop r9
+				0x41, 0x58, // pop r8
+				0x59, // pop rcx
+				0x5a, // pop rdx
 				0x88, 0x81, 0xba, 0x1c, 0x00, 0x00, // MOV byte ptr[RCX + 0x1cba],AL
 				0xe9, 0x00, 0x00, 0x00, 0x00 // JMP retAddr
 			};
 
 			std::byte *space = trampoline->RawSpace(sizeof(payload));
 			memcpy(space, payload, sizeof(payload));
-			WriteOffsetValue(space + 2 + 2 + 6 + 1, retAddr);
+
+			LPVOID funcAddr = GetFuncAddr(PatchedIncThrowResistance);
+			memcpy(space + 1 + 3 + 1 + 3 + 8 + 2, &funcAddr, sizeof(funcAddr));
+
+			WriteOffsetValue(space + 1 + 3 + 1 + 3 + 8 + 10 + 12 + 6 + 1, retAddr);
+
 			InjectHook(incAddr, space, PATCH_JUMP);
 		}
 	}
