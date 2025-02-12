@@ -297,6 +297,42 @@ void OnInitializeHook()
 			Nop(match.get<void>(), 6);
 			InjectHook(match.get<void>(), trampoline->Jump(PatchedGetEnemyThrowResistance), PATCH_CALL);
 		}
+
+		/*
+		* 84 c0 74 08 fe c0 88 81 ba 1c 00 00
+		* 
+		* After a successful throw by the player, the enemy's throw resistance will increase by 1.
+		* So each successful throw will make the next one after a little more difficult.
+		*/
+		auto incThrowResistance = pattern("84 c0 74 08 fe c0 88 81 ba 1c 00 00");
+		if (incThrowResistance.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: IncreaseThrowResistance" << endl;
+			}
+			auto match = incThrowResistance.get_one();
+			void *incAddr = match.get<void>(4);
+			void *retAddr = (void *)((uintptr_t)incAddr + 8);
+			Trampoline *trampoline = Trampoline::MakeTrampoline(incAddr);
+
+			// Nop these 2 instructions to make room for our JMP:
+			// 0xfe, 0xc0 (INC AL)
+			// 0x88, 0x81, 0xba, 0x1c, 0x00, 0x00 (MOV byte ptr[RCX + 0x1cba],AL)
+			Nop(incAddr, 8);
+
+			// There's no reason to increment and then decrement right after
+			// Just wanted to see if this would work
+			const uint8_t payload[] = {
+				0xfe, 0xc0, // INC AL
+				0xfe, 0xc8, // DEC AL
+				0x88, 0x81, 0xba, 0x1c, 0x00, 0x00, // MOV byte ptr[RCX + 0x1cba],AL
+				0xe9, 0x00, 0x00, 0x00, 0x00 // JMP retAddr
+			};
+
+			std::byte *space = trampoline->RawSpace(sizeof(payload));
+			memcpy(space, payload, sizeof(payload));
+			WriteOffsetValue(space + 2 + 2 + 6 + 1, retAddr);
+			InjectHook(incAddr, space, PATCH_JUMP);
+		}
 	}
 
 	// log current time to file to get some feedback once hook is done
