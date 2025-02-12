@@ -21,13 +21,39 @@ static constexpr bool s_Debug = true;
 #else
 static constexpr bool s_Debug = false;
 #endif // _DEBUG
+static const auto tz = std::chrono::current_zone();
+static constexpr std::string_view tzFmt("{:%Y/%m/%d %H:%M:%S}");
+
+static std::string getUTCString() {
+	using namespace std::chrono;
+	const auto utcNow = system_clock::now();
+	return std::format(tzFmt, floor<seconds>(utcNow));
+}
+
+static std::string getUTCString_ms() {
+	using namespace std::chrono;
+	const auto utcNow = system_clock::now();
+	return std::format(tzFmt, utcNow);
+}
+
+static std::string getTzString() {
+	using namespace std::chrono;
+	const auto utcNow = system_clock::now();
+	const auto tzNow = tz->to_local(utcNow);
+	return std::format(tzFmt, floor<seconds>(tzNow));
+}
+
+static std::string getTzString_ms() {
+	using namespace std::chrono;
+	const auto utcNow = system_clock::now();
+	const auto tzNow = tz->to_local(utcNow);
+	return std::format(tzFmt, tzNow);
+}
 
 
 namespace EasySpam {
 	using namespace std;
-	using namespace std::chrono;
-	static const auto tz = current_zone();
-	static constexpr string_view tzFmt("{:%Y/%m/%d %H:%M:%S}");
+	
 	static ofstream ofs1, ofs2, ofs3, ofs4;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
 	static string dbg_msg;
@@ -56,10 +82,7 @@ namespace EasySpam {
 				DebugBreak();
 			}
 			if (ofs1.is_open()) {
-				const auto utcNow = system_clock::now();
-				const auto tzNow = tz->to_local(utcNow);
-				const string str_TzNow = format(tzFmt, tzNow);
-				ofs1 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", str_TzNow, dbg_Counter1++, origThrowRes, easyThrowRes) << endl;
+				ofs1 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", getTzString_ms(), dbg_Counter1++, origThrowRes, easyThrowRes) << endl;
 			}
 		}
 
@@ -69,8 +92,6 @@ namespace EasySpam {
 
 namespace HeatFix {
 	using namespace std;
-	using namespace std::chrono;
-	static const auto tz = current_zone();
 	static ofstream ofs1, ofs2;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
 	static string dbg_msg;
@@ -132,11 +153,8 @@ namespace HeatFix {
 				logFailed = true; // don't keep on trying to write logs if open failed (e.g. in case of missing write permissions)
 			}
 			else {
-				const auto utcNow = system_clock::now();
-				const auto tzNow = tz->to_local(utcNow);
-				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
 				dbg_msg = format("- TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}", 
-					str_TzNow, IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
+					getTzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
 				ofs1 << "PatchedHeatFunc: " << dbg_Counter1++ << dbg_msg << endl;
 				if (counter % 2 == 0) {
 					ofs2 << "OrigHeatFunc: " << dbg_Counter2++ << dbg_msg << endl;
@@ -224,11 +242,6 @@ void OnInitializeHook()
 	// Check if patch should be disabled
 	if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
 		if (ofs.is_open()) {
-			using namespace std::chrono;
-			const auto utcNow = system_clock::now();
-			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-			const auto tzNow = HeatFix::tz->to_local(utcNow);
-			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
 			if (game != Game::Yakuza3) {
 				ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
 			}
@@ -238,8 +251,8 @@ void OnInitializeHook()
 			if (s_Debug) {
 				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
 			}
-			ofs << "Local: " << str_TzNow << endl;
-			ofs << "UTC:   " << str_UtcNow << endl;
+			ofs << "Local: " << getTzString() << endl;
+			ofs << "UTC:   " << getUTCString() << endl;
 		}
 		return;
 	}
@@ -288,16 +301,11 @@ void OnInitializeHook()
 
 	// log current time to file to get some feedback once hook is done
 	if (ofs.is_open()) {
-		using namespace std::chrono;
-		const auto utcNow = system_clock::now();
-		const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-		const auto tzNow = HeatFix::tz->to_local(utcNow);
-		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
 		ofs << "Hook done!" << endl;
 		if (s_Debug) {
 			ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
 		}
-		ofs << "Local: " << str_TzNow << endl;
-		ofs << "UTC:   " << str_UtcNow << endl;
+		ofs << "Local: " << getTzString() << endl;
+		ofs << "UTC:   " << getUTCString() << endl;
 	}
 }
