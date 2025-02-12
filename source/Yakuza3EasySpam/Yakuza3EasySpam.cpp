@@ -23,6 +23,45 @@ static constexpr bool s_Debug = false;
 #endif // _DEBUG
 
 
+namespace EasySpam {
+	using namespace std;
+	using namespace std::chrono;
+	static const auto tz = current_zone();
+	static ofstream ofs1, ofs2, ofs3, ofs4;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
+	static string dbg_msg;
+
+	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
+	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
+
+	static uint8_t PatchedGetEnemyThrowResistance(uintptr_t param1) {
+		// CALL qword ptr[param_1 + 0xb40]
+		uintptr_t pGetEnemyThrowResistance = *(uintptr_t *)(param1);
+		pGetEnemyThrowResistance = *(uintptr_t *)(pGetEnemyThrowResistance + 0xb40);
+		const GetEnemyThrowResistanceType orig = (GetEnemyThrowResistanceType)pGetEnemyThrowResistance;
+
+		const uint8_t origThrowRes = orig(param1);
+		uint8_t easyThrowRes = origThrowRes / 2;
+		if (origThrowRes > 0 && easyThrowRes == 0) {
+			easyThrowRes++;
+		}
+
+		if (s_Debug) {
+			if (orig != enemyThrowResFunc) {
+				DebugBreak();
+			}
+			if (ofs1.is_open()) {
+				const auto utcNow = system_clock::now();
+				const auto tzNow = tz->to_local(utcNow);
+				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
+				ofs1 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", str_TzNow, dbg_Counter1++, origThrowRes, easyThrowRes) << endl;
+			}
+		}
+
+		return easyThrowRes;
+	}
+}
+
 namespace HeatFix {
 	using namespace std;
 	using namespace std::chrono;
@@ -148,7 +187,7 @@ void OnInitializeHook()
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 	const Config config = loadConfig();
-	ofstream ofs = ofstream("Yakuza3HeatFix.txt", ios::binary | ios::trunc | ios::out);
+	ofstream ofs = ofstream(format("{:s}{:s}", rsc_Name, ".txt"), ios::binary | ios::trunc | ios::out);
 
 	// Game/window name taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
 	enum class Game
@@ -200,73 +239,45 @@ void OnInitializeHook()
 		return;
 	}
 
-	// Hook/Redirect the game's HeatUpdate function to our own function.
-	// As far as I can tell - HeatUpdate is only called while the game is unpaused.
-	// So Heat gain caused by using an Item (e.g. Staminan) from the menu won't call this function.
+	/*
+	* Patch instances where the game expects the player to spam press a key to complete an action.
+	* The goal is to make these instances easier by lowering the amount of required keypresses.
+	* 
+	* SHA-1 checksums for compatible binaries:
+	* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
+	* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
+	* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
+	*/
 	{
-		using namespace HeatFix;
-		/*
-		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00 f7 80 54 03
-		* 
-		* SHA-1 checksums for compatible binaries:
-		* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
-		* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
-		* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
-		*/
-		auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00 f7 80 54 03");
-		if (updateHeat.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: HeatUpdate" << endl;
+		using namespace EasySpam;
+
+		if (s_Debug) {
+			ofs1 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug1.txt"), ios::out | ios::trunc | ios::binary);
+
+			// GetEnemyThrowResistance - to verify we're calling the correct function
+			auto enemyThrowCheck = pattern("0f b6 81 ba 1c 00 00 c3");
+			if (enemyThrowCheck.count_hint(1).size() == 1) {
+				auto match = enemyThrowCheck.get_one();
+				enemyThrowResFunc = (GetEnemyThrowResistanceType)match.get<void>();
 			}
-			auto match = updateHeat.get_one();
+		}
+
+		/*
+		* ff 92 40 0b 00 00 3a d8
+		* 
+		* Call to function that returns the throw "resistance" of the enemy that the player is trying to throw.
+		* Essentially the number of keypresses required to overpower and successfully throw the enemy.
+		* Won't be called for standard thugs since those can be thrown immediately.
+		*/
+		auto enemyThrowResistance = pattern("ff 92 40 0b 00 00 3a d8");
+		if (enemyThrowResistance.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: GetEnemyThrowResistance" << endl;
+			}
+			auto match = enemyThrowResistance.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
-			ReadCall(match.get<void>(), origHeatFunc);
-			InjectHook(match.get<void>(), trampoline->Jump(PatchedHeatFunc), PATCH_CALL);
-		}
-
-		/*
-		* 48 81 ec c0 00 00 00 48 8b d9 e8 ?? ?? ?? ?? 85 c0
-		* 
-		* HeatUpdate() returns right at the start if this function returns 0.
-		* Seems to always return 0, unless the player is in combat.
-		*/
-		auto playerInCombat = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
-		if (playerInCombat.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IsPlayerInCombat" << endl;
-			}
-			auto match = playerInCombat.get_one();
-			ReadCall(match.get<void>(10), IsPlayerInCombat);
-		}
-
-		/*
-		* e8 ?? ?? ?? ?? f7 83 d8 13 00 00 00 00 01 00
-		* 
-		* Most of HeatUpdate()'s code is skipped if this function returns != 0
-		* Seems to return 1 if combat is inactive, e.g. during Heat moves/cutscenes
-		*/
-		auto combatInactive = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");
-		if (combatInactive.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IsCombatInactive" << endl;
-			}
-			auto match = combatInactive.get_one();
-			ReadCall(match.get<void>(), IsCombatInactive);
-		}
-
-		/*
-		* 48 8b 0d ?? ?? ?? ?? 39 41 08 0f 85
-		* 
-		* Seems to point to a variable that is == 0 while combat is ongoing and == 1
-		* when combat is finished (i.e. either the player or all enemies are knocked out)
-		*/
-		auto globalPattern = pattern("48 8b 0d ? ? ? ? 39 41 08 0f 85");
-		if (globalPattern.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IsCombatFinished" << endl;
-			}
-			auto match = globalPattern.get_one();
-			ReadOffsetValue(match.get<void>(3), globalPointer);
+			Nop(match.get<void>(), 6);
+			InjectHook(match.get<void>(), trampoline->Jump(PatchedGetEnemyThrowResistance), PATCH_CALL);
 		}
 	}
 

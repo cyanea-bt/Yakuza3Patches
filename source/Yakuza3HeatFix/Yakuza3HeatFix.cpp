@@ -102,16 +102,16 @@ namespace HeatFix {
 
 		if (!IsPlayerInCombat()) {
 			counter = 0;
-			return; // HeatUpdate() will return immediately in this case, so we just skip calling it
+			return; // UpdateHeat() will return immediately in this case, so we just skip calling it
 		}
 		else if (counter == 1 && (IsCombatInactive() || isCombatPausedByTutorial || IsActorDead(param1) || isCombatInTransition || isCombatFinished)) {
 			if (s_Debug) {
 				if (ofs2.is_open()) {
-					ofs2 << "Fast HeatUpdate: " << dbg_Counter2++ << dbg_msg << endl;
+					ofs2 << "Fast UpdateHeat: " << dbg_Counter2++ << dbg_msg << endl;
 				}
 			}
-			// HeatUpdate() won't change the Heat value in these cases, but will still execute some code.
-			// Since I don't know how important that code is, we'll call HeatUpdate() immediately instead of waiting for the next frame/update.
+			// UpdateHeat() won't change the Heat value in these cases, but will still execute some code.
+			// Since I don't know how important that code is, we'll call UpdateHeat() immediately instead of waiting for the next frame/update.
 			origHeatFunc(param1, param2, param3, param4);
 			counter++;
 		}
@@ -119,14 +119,14 @@ namespace HeatFix {
 			/*
 			* Y3 on PS3 runs at 30 fps during gameplay (60 fps in menus, though that hardly matters here).
 			* Y3R always runs its internal logic 60 times per second (even when setting framelimit to 30 fps).
-			* While "remastering" Y3, the HeatUpdate function (along with many other functions) wasn't rewritten
+			* While "remastering" Y3, the UpdateHeat function (along with many other functions) wasn't rewritten
 			* to take 60 updates per second into account. This leads to at least 2 issues in regards to the Heat bar:
 			* - Heat value starts to drop too soon (should start after ~4 seconds but instead starts after ~2 seconds in the "Remaster")
 			* - After the Heat value starts dropping, the drain rate is too fast (~2x) when compared to the PS3 version.
 			* 
-			* Proper way to fix this would be to rewrite the HeatUpdate function (which is responsible for both of these issues)
+			* Proper way to fix this would be to rewrite the UpdateHeat function (which is responsible for both of these issues)
 			* to handle 60 updates per second. But that is definitely more work than I'm willing to put in at the moment.
-			* Instead - we'll only run the HeatUpdate function every 2nd time, essentially halving the rate of Heat calculations.
+			* Instead - we'll only run the UpdateHeat function every 2nd time, essentially halving the rate of Heat calculations.
 			* This seems to work fine and the resulting drain rate is almost identical to the PS3 original.
 			*/
 			if (counter % 2 == 0) {
@@ -148,7 +148,7 @@ void OnInitializeHook()
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 	const Config config = loadConfig();
-	ofstream ofs = ofstream("Yakuza3HeatFix.txt", ios::binary | ios::trunc | ios::out);
+	ofstream ofs = ofstream(format("{:s}{:s}", rsc_Name, ".txt"), ios::binary | ios::trunc | ios::out);
 
 	// Game/window name taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
 	enum class Game
@@ -200,23 +200,27 @@ void OnInitializeHook()
 		return;
 	}
 
-	// Hook/Redirect the game's HeatUpdate function to our own function.
-	// As far as I can tell - HeatUpdate is only called while the game is unpaused.
-	// So Heat gain caused by using an Item (e.g. Staminan) from the menu won't call this function.
+	/*
+	* Hook/Redirect the game's UpdateHeat function to our own function.
+	* As far as I can tell - UpdateHeat is only called while the game is unpaused.
+	* Heat gain caused by using an Item (e.g. Staminan) from the menu won't call this function.
+	* 
+	* SHA-1 checksums for compatible binaries:
+	* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
+	* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
+	* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
+	*/
 	{
 		using namespace HeatFix;
 		/*
 		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00 f7 80 54 03
 		* 
-		* SHA-1 checksums for compatible binaries:
-		* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
-		* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
-		* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
+		* Pattern for the player actor's call to UpdateHeat().
 		*/
 		auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00 f7 80 54 03");
 		if (updateHeat.count_hint(1).size() == 1) {
 			if (ofs.is_open()) {
-				ofs << "Found pattern: HeatUpdate" << endl;
+				ofs << "Found pattern: UpdateHeat" << endl;
 			}
 			auto match = updateHeat.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
@@ -227,7 +231,7 @@ void OnInitializeHook()
 		/*
 		* 48 81 ec c0 00 00 00 48 8b d9 e8 ?? ?? ?? ?? 85 c0
 		* 
-		* HeatUpdate() returns right at the start if this function returns 0.
+		* UpdateHeat() returns right at the start if this function returns 0.
 		* Seems to always return 0, unless the player is in combat.
 		*/
 		auto playerInCombat = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
@@ -242,7 +246,7 @@ void OnInitializeHook()
 		/*
 		* e8 ?? ?? ?? ?? f7 83 d8 13 00 00 00 00 01 00
 		* 
-		* Most of HeatUpdate()'s code is skipped if this function returns != 0
+		* Most of UpdateHeat()'s code is skipped if this function returns != 0
 		* Seems to return 1 if combat is inactive, e.g. during Heat moves/cutscenes
 		*/
 		auto combatInactive = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");

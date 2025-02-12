@@ -1,0 +1,5 @@
+Command:
+C:\Games\Yakuza 3\Yakuza3.exe
+
+Working dir:
+C:\Games\Yakuza 3\
