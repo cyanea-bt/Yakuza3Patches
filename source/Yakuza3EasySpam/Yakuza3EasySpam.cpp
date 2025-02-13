@@ -61,14 +61,25 @@ namespace EasySpam {
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
 	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
-	static uint8_t PatchedIncThrowResistance(uint8_t param1) {
+	static uint8_t PatchedIncThrowResistance(uint8_t oldThrowRes) {
+		uint8_t newThrowRes;
+		if (oldThrowRes == UINT8_MAX) {
+			newThrowRes = oldThrowRes;
+		}
+		else {
+			newThrowRes = oldThrowRes + 1;
+		}
+
 		if (s_Debug) {
+			if (oldThrowRes > 80) {
+				DebugBreak(); // Anything higher than ~40 is probably wrong
+			}
 			if (ofs1.is_open()) {
-				ofs1 << format("PatchedIncThrowResistance - TzNow: {:s} - {:d} - param1: {:d}", getTzString_ms(), dbg_Counter1++, param1) << endl;
+				ofs1 << format("PatchedIncThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - newThrowRes: {:d}", getTzString_ms(), dbg_Counter1++, oldThrowRes, newThrowRes) << endl;
 			}
 		}
 
-		return ++param1;
+		return newThrowRes;
 	}
 
 	// param1 here is a pointer to the actor object of the enemy that the player is trying to throw
@@ -348,9 +359,11 @@ void OnInitializeHook()
 			* Maybe I'm being dumb but I see no other way to inject a call to our function
 			* while guaranteeing that the contents of all registers will stay the same. Basically:
 			* - JMP to our payload
-			* - back up volatile registers RCX, RDX, R8, R9, R10, R11 (no need to back up RAX here)
-			* - load address of our function into RAX
+			* - back up volatile registers RCX, RDX, R8, R9, R10, R11 (RAX is volatile too, but no need to back it up here)
+			* - back up RSP before alignment
+			* - align RSP to 16-byte boundary (not necessary here but I like being safe)
 			* - reserve 32 bytes of shadow space (otherwise our register backups on the stack could be overwritten by the callee)
+			* - load address of our function into RAX
 			* - call our function
 			* - restore RSP and RCX, RDX, R8, R9, R10, R11
 			* - write return value of our function to memory (i.e. overwriting the old throw resistance value)
@@ -362,7 +375,12 @@ void OnInitializeHook()
 			* https://learn.microsoft.com/en-us/cpp/build/prolog-and-epilog?view=msvc-170
 			* https://g3tsyst3m.github.io/shellcoding/assembly/debugging/x64-Assembly-&-Shellcoding-101/
 			* https://vimalshekar.github.io/reverse-engg/Assembly-Basics-Part11
+			* https://stackoverflow.com/a/30191127
+			* https://stackoverflow.com/a/30194393
 			* https://medium.com/@sruthk/cracking-assembly-function-prolog-and-epilog-in-x64-ea1bdc50514c
+			* https://www.reddit.com/r/asm/comments/1bff694/x64_calling_convention_and_shadow_space/
+			* https://www.reddit.com/r/asm/comments/12o59gk/aligning_stack/
+			* https://stackoverflow.com/a/64729675
 			*/
 			const uint8_t payload[] = {
 				0x51, // push rcx
@@ -372,17 +390,21 @@ void OnInitializeHook()
 				0x41, 0x51, // push r9
 				0x41, 0x52, // push r10
 				0x41, 0x53, // push r11
+				0x48, 0x89, 0xe0, // mov rax, rsp (back up rsp before alignment)
+				0x48, 0x83, 0xe4, 0xf0, // and rsp, -16 (align rsp to 16-byte boundary if necessary)
+				0x50, // push rax (push old rsp contents onto the stack, which will unalign rsp again)
+				0x48, 0x83, 0xec, 0x28, // sub rsp, 0x28 (0x20 shadow space for callee + 0x8 for stack alignment)
 				0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, PatchedIncThrowResistance
-				0x48, 0x83, 0xec, 0x20, // sub rsp, 0x20 (reserve shadow space for callee)
 				0xff, 0xd0, // call rax
-				0x48, 0x83, 0xc4, 0x20, // add rsp, 0x20 ("unreserve" shadow space)
+				0x48, 0x83, 0xc4, 0x28, // add rsp, 0x28 ("unreserve" shadow space + manual alignment)
+				0x5c, // pop rsp (restore rsp from before 16-byte boundary alignment)
 				0x41, 0x5b, // pop r11
 				0x41, 0x5a, // pop r10
 				0x41, 0x59, // pop r9
 				0x41, 0x58, // pop r8
 				0x5a, // pop rdx
 				0x59, // pop rcx
-				0x88, 0x81, 0xba, 0x1c, 0x00, 0x00, // MOV byte ptr[RCX + 0x1cba],AL (write return value to memory)
+				0x88, 0x81, 0xba, 0x1c, 0x00, 0x00, // MOV byte ptr[RCX + 0x1cba], AL (write return value to memory)
 				0xe9, 0x00, 0x00, 0x00, 0x00 // JMP retAddr
 			};
 
@@ -390,7 +412,7 @@ void OnInitializeHook()
 			memcpy(space, payload, sizeof(payload));
 
 			LPVOID funcAddr = GetFuncAddr(PatchedIncThrowResistance);
-			memcpy(space + 2 + 3 + 8 + 2, &funcAddr, sizeof(funcAddr));
+			memcpy(space + 2 + 3 + 8 + 3 + 4 + 1 + 4 + 2, &funcAddr, sizeof(funcAddr));
 
 			WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 			InjectHook(incAddr, space, PATCH_JUMP);
