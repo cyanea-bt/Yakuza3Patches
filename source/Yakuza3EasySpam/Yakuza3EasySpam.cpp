@@ -321,6 +321,8 @@ void OnInitializeHook()
 		if (s_Debug) {
 			ofs1 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug1.txt"), ios::out | ios::trunc | ios::binary);
 			ofs2 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug2.txt"), ios::out | ios::trunc | ios::binary);
+			//ofs3 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug3.txt"), ios::out | ios::trunc | ios::binary);
+			//ofs4 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug4.txt"), ios::out | ios::trunc | ios::binary);
 
 			// GetEnemyThrowResistance - to verify we're calling the correct function
 			auto enemyThrowCheck = pattern("0f b6 81 ba 1c 00 00 c3");
@@ -373,7 +375,8 @@ void OnInitializeHook()
 			* Inject call to our function in order to modify how/when the enemy's throw resistance increases.
 			* Now - it is obviously entirely unnecessary to inject a function call here,
 			* since we can simply change the contents of RAX in assembly before writing them to memory.
-			* But I like being able to write a log message whenever the game hits that code.
+			* But I like being able to write a log message whenever the game hits that code and I also wanna
+			* be able to modify the return value depending on the settings loaded from the JSON configuration file.
 			* 
 			* Maybe I'm being dumb but I see no better way to inject a call to our function
 			* while guaranteeing that the contents of all registers will stay the same. Basically:
@@ -432,26 +435,28 @@ void OnInitializeHook()
 			memcpy(space, payload, sizeof(payload));
 
 			LPVOID funcAddr = GetFuncAddr(PatchedIncThrowResistance);
-			memcpy(space + 2 + 3 + 8 + 3 + 4 + 1 + 4 + 2, &funcAddr, sizeof(funcAddr));
+			// 1 + 1 + 3 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 27
+			memcpy(space + 27, &funcAddr, sizeof(funcAddr));
 
 			WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 			InjectHook(incAddr, space, PATCH_JUMP);
 		}
 
 		/*
-		* fe 8b 5e 1b 00 00 eb 4d
+		* 44 8d 47 06 eb 37 fe 8b 5e 1b 00 00
 		* 
 		* When the player is trying to escape an enemy's grab, each button press will decrease a counter by 1.
-		* Once this counter reaches 0 the player will escape the enemy's grab/hold.
+		* After this counter reaches 0, the player will escape the enemy's grab/hold with the next button press.
 		*/
-		auto decHoldPower = pattern("fe 8b 5e 1b 00 00 eb 4d");
+		auto decHoldPower = pattern("44 8d 47 06 eb 37 fe 8b 5e 1b 00 00");
 		if (decHoldPower.count_hint(1).size() == 1) {
 			if (ofs.is_open()) {
 				ofs << "Found pattern: DecreaseHoldPower" << endl;
 			}
 			auto match = decHoldPower.get_one();
-			void *decAddr = match.get<void>();
+			void *decAddr = match.get<void>(6);
 			void *retAddr = (void *)((uintptr_t)decAddr + 6);
+			void *retAddrIfZero = (void *)((uintptr_t)decAddr - 6);
 			Trampoline *trampoline = Trampoline::MakeTrampoline(decAddr);
 
 			// Nop this instruction to make room for our JMP:
@@ -459,8 +464,16 @@ void OnInitializeHook()
 			// RBX = address of player actor object
 			Nop(decAddr, 6);
 
-			// Inject call to our function in order to modify how much each button press will decrease the grab counter.
-			// Since the decrease happens after the escape check, at least 2 button presses will always be required to escape.
+			/*
+			* Inject call to our function in order to modify how much each button press will decrease the grab counter.
+			* I've chosen to slightly modify the game's default behavior here. By default the game requires another key
+			* press after the counter reaches 0, since the decrease happens after the check for 0. My modification
+			* will let the player escape immediately once the counter hits 0.
+			* 
+			* Again - same reason as above for why I chose to inject a call here instead of modifying the value in assembly.
+			* And again - the goal here is to have all registers as well as the stack remain unchanged once we return to the
+			* game's own code. (Except for RDI, which we explicitly want to change if our function returned 0)
+			*/
 			const uint8_t payload[] = {
 				0x50, // push rax
 				0x51, // push rcx
@@ -479,6 +492,7 @@ void OnInitializeHook()
 				0x48, 0x83, 0xc4, 0x28, // add rsp, 0x28 ("unreserve" shadow space + manual alignment)
 				0x5c, // pop rsp (restore rsp from before 16-byte boundary alignment)
 				0x88, 0x83, 0x5e, 0x1b, 0x00, 0x00, // mov BYTE PTR[rbx + 0x1b5e], al (write return value to memory)
+				0x3c, 0x00, // cmp al, 0x0 (check if return value was 0)
 				0x41, 0x5b, // pop r11
 				0x41, 0x5a, // pop r10
 				0x41, 0x59, // pop r9
@@ -486,16 +500,21 @@ void OnInitializeHook()
 				0x5a, // pop rdx
 				0x59, // pop rcx
 				0x58, // pop rax
-				0xe9, 0x00, 0x00, 0x00, 0x00 // jmp retAddr
+				0x74, 0x05, // jz/je +0x5 (skip next instruction if return value was 0)
+				0xe9, 0x00, 0x00, 0x00, 0x00, // jmp retAddr
+				0x48, 0x31, 0xff, // xor rdi, rdi (set RDI to 0 if return value was 0)
+				0xe9, 0x00, 0x00, 0x00, 0x00 // jmp retAddrIfZero (jump to immediate release if return value was 0)
 			};
 
 			std::byte *space = trampoline->RawSpace(sizeof(payload));
 			memcpy(space, payload, sizeof(payload));
 
 			LPVOID funcAddr = GetFuncAddr(PatchedDecHoldPower);
-			memcpy(space + 2 + 7 + 9 + 3 + 4 + 1 + 4 + 2, &funcAddr, sizeof(funcAddr));
+			// 1 + 1 + 7 + 1 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 32
+			memcpy(space + 32, &funcAddr, sizeof(funcAddr));
 
-			WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+			WriteOffsetValue(space + sizeof(payload) - 5 - 3 - 4, retAddr);
+			WriteOffsetValue(space + sizeof(payload) - 4, retAddrIfZero);
 			InjectHook(decAddr, space, PATCH_JUMP);
 		}
 	}
