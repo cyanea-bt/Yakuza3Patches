@@ -61,6 +61,24 @@ namespace EasySpam {
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
 	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
+	static uint8_t PatchedDecHoldPower(uint8_t oldHoldPower) {
+		uint8_t newHoldPower = 0;
+		if (oldHoldPower > 2) {
+			newHoldPower = oldHoldPower - 2;
+		}
+
+		if (s_Debug) {
+			if (oldHoldPower > 40) {
+				DebugBreak(); // Anything higher than ~20 is probably wrong
+			}
+			if (ofs2.is_open()) {
+				ofs2 << format("PatchedDecHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - newHoldPower: {:d}", getTzString_ms(), dbg_Counter2++, oldHoldPower, newHoldPower) << endl;
+			}
+		}
+
+		return newHoldPower;
+	}
+
 	static uint8_t PatchedIncThrowResistance(uint8_t oldThrowRes) {
 		uint8_t newThrowRes;
 		if (oldThrowRes == UINT8_MAX) {
@@ -302,6 +320,7 @@ void OnInitializeHook()
 
 		if (s_Debug) {
 			ofs1 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug1.txt"), ios::out | ios::trunc | ios::binary);
+			ofs2 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug2.txt"), ios::out | ios::trunc | ios::binary);
 
 			// GetEnemyThrowResistance - to verify we're calling the correct function
 			auto enemyThrowCheck = pattern("0f b6 81 ba 1c 00 00 c3");
@@ -351,12 +370,12 @@ void OnInitializeHook()
 			Nop(incAddr, 8);
 
 			/*
-			* Inject call to our function in order to modify enemy throw resistance.
+			* Inject call to our function in order to modify how/when the enemy's throw resistance increases.
 			* Now - it is obviously entirely unnecessary to inject a function call here,
 			* since we can simply change the contents of RAX in assembly before writing them to memory.
 			* But I like being able to write a log message whenever the game hits that code.
 			* 
-			* Maybe I'm being dumb but I see no other way to inject a call to our function
+			* Maybe I'm being dumb but I see no better way to inject a call to our function
 			* while guaranteeing that the contents of all registers will stay the same. Basically:
 			* - JMP to our payload
 			* - back up volatile registers RCX, RDX, R8, R9, R10, R11 (RAX is volatile too, but no need to back it up here)
@@ -375,6 +394,7 @@ void OnInitializeHook()
 			* https://learn.microsoft.com/en-us/cpp/build/prolog-and-epilog?view=msvc-170
 			* https://g3tsyst3m.github.io/shellcoding/assembly/debugging/x64-Assembly-&-Shellcoding-101/
 			* https://vimalshekar.github.io/reverse-engg/Assembly-Basics-Part11
+			* https://sonictk.github.io/asm_tutorial/
 			* https://stackoverflow.com/a/30191127
 			* https://stackoverflow.com/a/30194393
 			* https://medium.com/@sruthk/cracking-assembly-function-prolog-and-epilog-in-x64-ea1bdc50514c
@@ -383,9 +403,9 @@ void OnInitializeHook()
 			* https://stackoverflow.com/a/64729675
 			*/
 			const uint8_t payload[] = {
-				0x51, // push rcx
+				0x51, // push rcx (RCX here contains the address of the enemy actor object)
 				0x52, // push rdx
-				0x48, 0x89, 0xc1, // mov rcx, rax (copy current throw resistance to param1 for our function)
+				0x48, 0x89, 0xc1, // mov rcx, rax (copy current throw resistance to RCX/param1 for our function)
 				0x41, 0x50, // push r8
 				0x41, 0x51, // push r9
 				0x41, 0x52, // push r10
@@ -416,6 +436,67 @@ void OnInitializeHook()
 
 			WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 			InjectHook(incAddr, space, PATCH_JUMP);
+		}
+
+		/*
+		* fe 8b 5e 1b 00 00 eb 4d
+		* 
+		* When the player is trying to escape an enemy's grab, each button press will decrease a counter by 1.
+		* Once this counter reaches 0 the player will escape the enemy's grab/hold.
+		*/
+		auto decHoldPower = pattern("fe 8b 5e 1b 00 00 eb 4d");
+		if (decHoldPower.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: DecreaseHoldPower" << endl;
+			}
+			auto match = decHoldPower.get_one();
+			void *decAddr = match.get<void>();
+			void *retAddr = (void *)((uintptr_t)decAddr + 6);
+			Trampoline *trampoline = Trampoline::MakeTrampoline(decAddr);
+
+			// Nop this instruction to make room for our JMP:
+			// 0xfe, 0x8b, 0x5e, 0x1b, 0x00, 0x00 (DEC byte ptr [RBX + 0x1b5e])
+			// RBX = address of player actor object
+			Nop(decAddr, 6);
+
+			// Inject call to our function in order to modify how much each button press will decrease the grab counter.
+			// Since the decrease happens after the escape check, at least 2 button presses will always be required to escape.
+			const uint8_t payload[] = {
+				0x50, // push rax
+				0x51, // push rcx
+				0x0f, 0xb6, 0x8b, 0x5e, 0x1b, 0x00, 0x00, // movzx ecx, BYTE PTR[rbx + 0x1b5e] (copy hold power to RCX/param1)
+				0x52, // push rdx
+				0x41, 0x50, // push r8
+				0x41, 0x51, // push r9
+				0x41, 0x52, // push r10
+				0x41, 0x53, // push r11
+				0x48, 0x89, 0xe0, // mov rax, rsp (back up rsp before alignment)
+				0x48, 0x83, 0xe4, 0xf0, // and rsp, -16 (align rsp to 16-byte boundary if necessary)
+				0x50, // push rax (push old rsp contents onto the stack, which will unalign rsp again)
+				0x48, 0x83, 0xec, 0x28, // sub rsp, 0x28 (0x20 shadow space for callee + 0x8 for stack alignment)
+				0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, PatchedDecHoldPower
+				0xff, 0xd0, // call rax
+				0x48, 0x83, 0xc4, 0x28, // add rsp, 0x28 ("unreserve" shadow space + manual alignment)
+				0x5c, // pop rsp (restore rsp from before 16-byte boundary alignment)
+				0x88, 0x83, 0x5e, 0x1b, 0x00, 0x00, // mov BYTE PTR[rbx + 0x1b5e], al (write return value to memory)
+				0x41, 0x5b, // pop r11
+				0x41, 0x5a, // pop r10
+				0x41, 0x59, // pop r9
+				0x41, 0x58, // pop r8
+				0x5a, // pop rdx
+				0x59, // pop rcx
+				0x58, // pop rax
+				0xe9, 0x00, 0x00, 0x00, 0x00 // jmp retAddr
+			};
+
+			std::byte *space = trampoline->RawSpace(sizeof(payload));
+			memcpy(space, payload, sizeof(payload));
+
+			LPVOID funcAddr = GetFuncAddr(PatchedDecHoldPower);
+			memcpy(space + 2 + 7 + 9 + 3 + 4 + 1 + 4 + 2, &funcAddr, sizeof(funcAddr));
+
+			WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+			InjectHook(decAddr, space, PATCH_JUMP);
 		}
 	}
 
