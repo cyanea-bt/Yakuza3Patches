@@ -15,40 +15,13 @@
 #include "Utils/Trampoline.h"
 #include "Utils/Patterns.h"
 #include "config.h"
+#include "utils.h"
 
 #if _DEBUG
 static constexpr bool s_Debug = true;
 #else
 static constexpr bool s_Debug = false;
 #endif // _DEBUG
-static const auto tz = std::chrono::current_zone();
-static constexpr std::string_view tzFmt("{:%Y/%m/%d %H:%M:%S}");
-
-static std::string getUTCString() {
-	using namespace std::chrono;
-	const auto utcNow = system_clock::now();
-	return std::format(tzFmt, floor<seconds>(utcNow));
-}
-
-static std::string getUTCString_ms() {
-	using namespace std::chrono;
-	const auto utcNow = system_clock::now();
-	return std::format(tzFmt, utcNow);
-}
-
-static std::string getTzString() {
-	using namespace std::chrono;
-	const auto utcNow = system_clock::now();
-	const auto tzNow = tz->to_local(utcNow);
-	return std::format(tzFmt, floor<seconds>(tzNow));
-}
-
-static std::string getTzString_ms() {
-	using namespace std::chrono;
-	const auto utcNow = system_clock::now();
-	const auto tzNow = tz->to_local(utcNow);
-	return std::format(tzFmt, tzNow);
-}
 
 
 namespace EasySpam {
@@ -88,7 +61,7 @@ namespace EasySpam {
 			}
 			if (ofs4.is_open()) {
 				ofs4 << format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - newChargeAmount: {:d} - result: {:d}", 
-					getTzString_ms(), dbg_Counter3++, oldChargeAmount, newChargeAmount, result) << endl;
+					utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, newChargeAmount, result) << endl;
 			}
 		}
 
@@ -106,7 +79,8 @@ namespace EasySpam {
 				DebugBreak(); // Anything higher than ~20 is probably wrong
 			}
 			if (ofs3.is_open()) {
-				ofs3 << format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - newHoldPower: {:d}", getTzString_ms(), dbg_Counter2++, oldHoldPower, newHoldPower) << endl;
+				ofs3 << format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - newHoldPower: {:d}", 
+					utils::TzString_ms(), dbg_Counter3++, oldHoldPower, newHoldPower) << endl;
 			}
 		}
 
@@ -127,7 +101,8 @@ namespace EasySpam {
 				DebugBreak(); // Anything higher than ~40 is probably wrong
 			}
 			if (ofs2.is_open()) {
-				ofs2 << format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - newThrowRes: {:d}", getTzString_ms(), dbg_Counter1++, oldThrowRes, newThrowRes) << endl;
+				ofs2 << format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - newThrowRes: {:d}", 
+					utils::TzString_ms(), dbg_Counter2++, oldThrowRes, newThrowRes) << endl;
 			}
 		}
 
@@ -155,7 +130,8 @@ namespace EasySpam {
 				DebugBreak();
 			}
 			if (ofs1.is_open()) {
-				ofs1 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", getTzString_ms(), dbg_Counter1++, origThrowRes, easyThrowRes) << endl;
+				ofs1 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", 
+					utils::TzString_ms(), dbg_Counter1++, origThrowRes, easyThrowRes) << endl;
 			}
 		}
 
@@ -227,7 +203,7 @@ namespace HeatFix {
 			}
 			else {
 				dbg_msg = format("- TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}", 
-					getTzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
+					utils::TzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
 				ofs1 << "PatchedHeatFunc: " << dbg_Counter1++ << dbg_msg << endl;
 				if (counter % 2 == 0) {
 					ofs2 << "OrigHeatFunc: " << dbg_Counter2++ << dbg_msg << endl;
@@ -273,16 +249,6 @@ namespace HeatFix {
 	}
 }
 
-
-// Can't seem to get the correct function address at runtime without this
-// ref: Utils/Trampoline.h
-template<typename Func>
-LPVOID GetFuncAddr(Func func)
-{
-	LPVOID addr;
-	memcpy(&addr, std::addressof(func), sizeof(addr));
-	return addr;
-}
 
 void OnInitializeHook()
 {
@@ -334,8 +300,8 @@ void OnInitializeHook()
 			if (s_Debug) {
 				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
 			}
-			ofs << "Local: " << getTzString() << endl;
-			ofs << "UTC:   " << getUTCString() << endl;
+			ofs << "Local: " << utils::TzString() << endl;
+			ofs << "UTC:   " << utils::UTCString() << endl;
 		}
 		return;
 	}
@@ -476,7 +442,7 @@ void OnInitializeHook()
 			std::byte *space = trampoline->RawSpace(sizeof(payload));
 			memcpy(space, payload, sizeof(payload));
 
-			LPVOID funcAddr = GetFuncAddr(PatchedIncThrowResistance);
+			auto funcAddr = utils::GetFuncAddr(PatchedIncThrowResistance);
 			// 1 + 1 + 3 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 27
 			memcpy(space + 27, &funcAddr, sizeof(funcAddr));
 
@@ -551,7 +517,7 @@ void OnInitializeHook()
 			std::byte *space = trampoline->RawSpace(sizeof(payload));
 			memcpy(space, payload, sizeof(payload));
 
-			LPVOID funcAddr = GetFuncAddr(PatchedDecHoldPower);
+			auto funcAddr = utils::GetFuncAddr(PatchedDecHoldPower);
 			// 1 + 1 + 7 + 1 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 32
 			memcpy(space + 32, &funcAddr, sizeof(funcAddr));
 
@@ -585,7 +551,7 @@ void OnInitializeHook()
 		if (s_Debug) {
 			ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
 		}
-		ofs << "Local: " << getTzString() << endl;
-		ofs << "UTC:   " << getUTCString() << endl;
+		ofs << "Local: " << utils::TzString() << endl;
+		ofs << "UTC:   " << utils::UTCString() << endl;
 	}
 }
