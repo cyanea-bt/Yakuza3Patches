@@ -1,6 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include "nlohmann/json.hpp"
 #include "config.h"
 #include "winutils.h"
@@ -11,21 +12,63 @@ namespace config {
 	namespace fs = std::filesystem;
 	using json = nlohmann::ordered_json;
 
-	void to_json(json &j, const Config &e) {
-		j = json();
-		j["Version"] = e.Version;
-		j["Enable"] = e.Enable;
-		j["Force"] = e.Force;
+	template<typename T>
+	T jsonToNumber(json::const_reference element, const T minVal, const T defaultVal) {
+		int64_t temp = 0;
+		T retVal;
+		if (element.is_number()) {
+			element.get_to(temp);
+			T MAX = numeric_limits<T>::max();
+			T MIN = numeric_limits<T>::min();
+			temp = temp > MAX ? MAX : temp;
+			temp = temp < MIN ? MIN : temp;
+			temp = temp >= minVal ? temp : defaultVal;
+			retVal = static_cast<T>(temp);
+		}
+		else {
+			retVal = defaultVal;
+		}
+		return retVal;
 	}
 
-	void from_json(const json &j, Config &e) {
-		j.at("Version").get_to(e.Version);
-		j.at("Enable").get_to(e.Enable);
-		j.at("Force").get_to(e.Force);
+	bool jsonToBool(json::const_reference element, const bool defaultVal) {
+		bool retVal;
+		if (element.is_boolean()) {
+			element.get_to(retVal);
+		}
+		else {
+			retVal = defaultVal;
+		}
+		return retVal;
+	}
+
+	string jsonToString(json::const_reference element, string_view defaultVal) {
+		string retVal;
+		if (element.is_string()) {
+			element.get_to(retVal);
+		}
+		else {
+			retVal = defaultVal;
+		}
+		return retVal;
+	}
+
+	static void to_json(json &j, const Config &e) {
+		j = json();
+		j["Version"] = e.Version;
+		j["EnablePatch"] = e.EnablePatch;
+		j["ForcePatch"] = e.ForcePatch;
+	}
+
+	static void from_json(const json &j, Config &e) {
+		Config defaults = Config();
+		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
+		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
+		e.ForcePatch = jsonToBool(j.at("ForcePatch"), defaults.ForcePatch);
 	}
 
 	// write prettified JSON to ostream
-	bool writeJson(ostream &os, const json &j) {
+	static bool writeJson(ostream &os, const json &j) {
 		const auto old_width = os.width();
 		// dump() produces warning C28020 and doesn't seem fixable? Probably a false positive anyways.
 		// So suppress warning for 1 line

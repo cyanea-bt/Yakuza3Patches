@@ -162,7 +162,7 @@ void OnInitializeHook()
 	}
 
 	// Check if patch should be disabled
-	if ((game != Game::Yakuza3 && !s_Config.Force) || !s_Config.Enable) {
+	if ((game != Game::Yakuza3 && !s_Config.ForcePatch) || !s_Config.EnablePatch) {
 		if (game != Game::Yakuza3) {
 			utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
 		}

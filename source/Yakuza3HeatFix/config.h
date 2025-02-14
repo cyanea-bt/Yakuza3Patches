@@ -5,8 +5,8 @@ namespace config {
 	struct Config {
 		std::string path;
 		uint32_t Version = 1;
-		bool Enable = true;
-		bool Force = false;
+		bool EnablePatch = true;
+		bool ForcePatch = false;
 	};
 
 	Config GetConfig();
