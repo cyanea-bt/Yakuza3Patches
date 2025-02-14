@@ -3,39 +3,7 @@
 #include <fstream>
 #include "nlohmann/json.hpp"
 #include "config.h"
-
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-
-#define WINVER 0x0601
-#define _WIN32_WINNT 0x0601
-#include <windows.h>
-#include <ShlObj.h>
-
-
-// Get real path to .asi file, since the working dir will be the dir of the .exe that loaded it.
-// And that won't match the .asi file's path if it is loaded from inside the "mods" subdirectory.
-// ref: https://gist.github.com/pwm1234/05280cf2e462853e183d
-//      https://stackoverflow.com/questions/6924195/get-dll-path-at-runtime
-static std::filesystem::path get_module_path(void *address)
-{
-	WCHAR path[MAX_PATH];
-	HMODULE hm = NULL;
-
-	if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-		GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-		(LPCWSTR)address,
-		&hm))
-	{
-		std::ostringstream oss;
-		oss << "GetModuleHandle returned " << GetLastError();
-		throw std::runtime_error(oss.str());
-	}
-	GetModuleFileNameW(hm, path, MAX_PATH);
-
-	std::wstring p(path);
-	return std::filesystem::path(p);
-}
+#include "winutils.h"
 
 
 namespace config {
@@ -73,7 +41,7 @@ namespace config {
 		ofstream ofs;
 		fs::path configPath(format("{:s}{:s}", rsc_Name, ".json"));
 		if (!fs::exists(configPath)) {
-			const fs::path asiDir = get_module_path(get_module_path).parent_path();
+			const fs::path asiDir = winutils::GetASIPath().parent_path();
 			configPath = fs::path(asiDir / configPath.filename());
 		}
 		

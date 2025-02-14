@@ -5,9 +5,6 @@
 #define _WIN32_WINNT 0x0601
 
 #include <format>
-#include <windows.h>
-#include <ShlObj.h>
-
 #include "Utils/MemoryMgr.h"
 #include "Utils/Trampoline.h"
 #include "Utils/Patterns.h"
@@ -23,7 +20,6 @@ static constexpr bool s_Debug = false;
 
 namespace EasySpam {
 	using namespace std;
-	
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
 
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
