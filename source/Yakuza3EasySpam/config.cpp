@@ -36,7 +36,14 @@ namespace config {
 		return !os.fail();
 	}
 
-	Config loadConfig() {
+	//
+	//
+	//
+
+	static Config s_Config;
+	static bool s_ConfigLoaded = false;
+
+	static Config loadConfig() {
 		ifstream ifs;
 		ofstream ofs;
 		fs::path configPath(format("{:s}{:s}", rsc_Name, ".json"));
@@ -47,17 +54,17 @@ namespace config {
 		
 		Config defaults = Config();
 		try {
-			Config conf;
+			Config loaded;
 			if (!fs::exists(configPath)) {
 				// create default config next to .asi file
 				ofs = ofstream(configPath, ios::out | ios::binary | ios::trunc);
 				writeJson(ofs, defaults);
-				conf = defaults;
+				loaded = defaults;
 			}
 			else {
 				// read existing config
 				ifs = ifstream(configPath, ios::in | ios::binary);
-				const json data = json::parse(ifs);
+				const json data = json::parse(ifs, nullptr, true, true); // ignore comments
 				ifs.close();
 				
 				uint32_t version = 0;
@@ -66,7 +73,7 @@ namespace config {
 				}
 				if (version == defaults.Version) {
 					// config version matches, should be able to parse
-					conf = data;
+					loaded = data;
 				}
 				else {
 					// replace outdated config with new defaults
@@ -79,16 +86,24 @@ namespace config {
 					fs::rename(configPath, bakPath);
 					ofs = ofstream(configPath, ios::out | ios::binary | ios::trunc);
 					writeJson(ofs, defaults);
-					conf = defaults;
+					loaded = defaults;
 				}
 			}
-			conf.path = configPath.string();
-			return conf;
+			loaded.path = configPath.string();
+			return loaded;
 		}
 		catch (const exception &err) {
 			//throw err;
 			cerr << err.what();
 			return defaults;
 		}
+	}
+
+	Config GetConfig() {
+		if (!s_ConfigLoaded) {
+			s_Config = loadConfig();
+			s_ConfigLoaded = true;
+		}
+		return s_Config;
 	}
 }

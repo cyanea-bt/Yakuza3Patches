@@ -16,6 +16,7 @@ static constexpr bool s_Debug = true;
 #else
 static constexpr bool s_Debug = false;
 #endif // _DEBUG
+static config::Config s_Config;
 
 
 namespace EasySpam {
@@ -131,7 +132,7 @@ void OnInitializeHook()
 	using namespace config;
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
-	const Config config = loadConfig();
+	s_Config = config::GetConfig();
 
 	// Game detection taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
 	enum class Game
@@ -161,7 +162,7 @@ void OnInitializeHook()
 	}
 
 	// Check if patch should be disabled
-	if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
+	if ((game != Game::Yakuza3 && !s_Config.Force) || !s_Config.Enable) {
 		if (game != Game::Yakuza3) {
 			utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
 		}
@@ -169,7 +170,7 @@ void OnInitializeHook()
 			utils::Log(format("{:s} was disabled!", rsc_Name));
 		}
 		if (s_Debug) {
-			utils::Log(format("\nConfig path: \"{:s}\"", config.path));
+			utils::Log(format("\nConfig path: \"{:s}\"", s_Config.path));
 		}
 		utils::Log(format("Local: {:s}", utils::TzString()));
 		utils::Log(format("UTC:   {:s}", utils::UTCString()));
@@ -411,7 +412,7 @@ void OnInitializeHook()
 	// log current time to file to get some feedback once hook is done
 	utils::Log("Hook done!");
 	if (s_Debug) {
-		utils::Log(format("\nConfig path: \"{:s}\"", config.path));
+		utils::Log(format("\nConfig path: \"{:s}\"", s_Config.path));
 	}
 	utils::Log(format("Local: {:s}", utils::TzString()));
 	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);

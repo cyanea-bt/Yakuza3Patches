@@ -9,5 +9,5 @@ namespace config {
 		bool Force = false;
 	};
 
-	Config loadConfig();
+	Config GetConfig();
 }
