@@ -4,10 +4,7 @@
 #define WINVER 0x0601
 #define _WIN32_WINNT 0x0601
 
-#include <chrono>
-#include <filesystem>
 #include <format>
-#include <fstream>
 #include <windows.h>
 #include <ShlObj.h>
 
@@ -27,15 +24,13 @@ static constexpr bool s_Debug = false;
 namespace EasySpam {
 	using namespace std;
 	
-	static ofstream ofs1, ofs2, ofs3, ofs4;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
-	static string dbg_msg;
 
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
-	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
+	static GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
 	typedef uint8_t(*AddHeatType)(uintptr_t, int32_t);
-	AddHeatType addHeatFunc = nullptr;
+	static AddHeatType addHeatFunc = nullptr;
 
 	// param1 here is the address of the player actor object
 	static uint8_t PatchedChargeFeelTheHeat(uintptr_t param1, int32_t oldChargeAmount) {
@@ -59,10 +54,8 @@ namespace EasySpam {
 			if (addHeat != addHeatFunc) {
 				DebugBreak();
 			}
-			if (ofs4.is_open()) {
-				ofs4 << format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - newChargeAmount: {:d} - result: {:d}", 
-					utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, newChargeAmount, result) << endl;
-			}
+			utils::Log(format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - newChargeAmount: {:d} - result: {:d}",
+				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, newChargeAmount, result), 4);
 		}
 
 		return result;
@@ -78,10 +71,8 @@ namespace EasySpam {
 			if (oldHoldPower > 40) {
 				DebugBreak(); // Anything higher than ~20 is probably wrong
 			}
-			if (ofs3.is_open()) {
-				ofs3 << format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - newHoldPower: {:d}", 
-					utils::TzString_ms(), dbg_Counter3++, oldHoldPower, newHoldPower) << endl;
-			}
+			utils::Log(format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - newHoldPower: {:d}",
+				utils::TzString_ms(), dbg_Counter3++, oldHoldPower, newHoldPower), 3);
 		}
 
 		return newHoldPower;
@@ -100,10 +91,8 @@ namespace EasySpam {
 			if (oldThrowRes > 80) {
 				DebugBreak(); // Anything higher than ~40 is probably wrong
 			}
-			if (ofs2.is_open()) {
-				ofs2 << format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - newThrowRes: {:d}", 
-					utils::TzString_ms(), dbg_Counter2++, oldThrowRes, newThrowRes) << endl;
-			}
+			utils::Log(format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - newThrowRes: {:d}",
+				utils::TzString_ms(), dbg_Counter2++, oldThrowRes, newThrowRes), 2);
 		}
 
 		return newThrowRes;
@@ -129,10 +118,8 @@ namespace EasySpam {
 			if (orig != enemyThrowResFunc) {
 				DebugBreak();
 			}
-			if (ofs1.is_open()) {
-				ofs1 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", 
-					utils::TzString_ms(), dbg_Counter1++, origThrowRes, easyThrowRes) << endl;
-			}
+			utils::Log(format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - easyThrowRes: {:d}", 
+				utils::TzString_ms(), dbg_Counter1++, origThrowRes, easyThrowRes), 1);
 		}
 
 		return easyThrowRes;
@@ -149,9 +136,8 @@ void OnInitializeHook()
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 	const Config config = loadConfig();
-	ofstream ofs = ofstream(format("{:s}{:s}", rsc_Name, ".txt"), ios::binary | ios::trunc | ios::out);
 
-	// Game/window name taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
+	// Game detection taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
 	enum class Game
 	{
 		Yakuza3,
@@ -180,19 +166,17 @@ void OnInitializeHook()
 
 	// Check if patch should be disabled
 	if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
-		if (ofs.is_open()) {
-			if (game != Game::Yakuza3) {
-				ofs << format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name) << endl;
-			}
-			else {
-				ofs << format("{:s} was disabled!", rsc_Name) << endl;
-			}
-			if (s_Debug) {
-				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
-			}
-			ofs << "Local: " << utils::TzString() << endl;
-			ofs << "UTC:   " << utils::UTCString() << endl;
+		if (game != Game::Yakuza3) {
+			utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
 		}
+		else {
+			utils::Log(format("{:s} was disabled!", rsc_Name));
+		}
+		if (s_Debug) {
+			utils::Log(format("\nConfig path: \"{:s}\"", config.path));
+		}
+		utils::Log(format("Local: {:s}", utils::TzString()));
+		utils::Log(format("UTC:   {:s}", utils::UTCString()));
 		return;
 	}
 
@@ -209,10 +193,11 @@ void OnInitializeHook()
 		using namespace EasySpam;
 
 		if (s_Debug) {
-			ofs1 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug1.txt"), ios::out | ios::trunc | ios::binary);
-			ofs2 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug2.txt"), ios::out | ios::trunc | ios::binary);
-			ofs3 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug3.txt"), ios::out | ios::trunc | ios::binary);
-			ofs4 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug4.txt"), ios::out | ios::trunc | ios::binary);
+			// Open debug logfile streams (not necessary but will save some time on the first real log message)
+			utils::Log("", 1);
+			utils::Log("", 2);
+			utils::Log("", 3);
+			utils::Log("", 4);
 
 			// GetEnemyThrowResistance - to verify we're calling the correct function
 			auto enemyThrowCheck = pattern("0f b6 81 ba 1c 00 00 c3");
@@ -239,9 +224,7 @@ void OnInitializeHook()
 		*/
 		auto enemyThrowResistance = pattern("ff 92 40 0b 00 00 3a d8");
 		if (enemyThrowResistance.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: GetEnemyThrowResistance" << endl;
-			}
+			utils::Log("Found pattern: GetEnemyThrowResistance");
 			auto match = enemyThrowResistance.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
 			Nop(match.get<void>(), 6);
@@ -256,9 +239,7 @@ void OnInitializeHook()
 		*/
 		auto incThrowResistance = pattern("84 c0 74 08 fe c0 88 81 ba 1c 00 00");
 		if (incThrowResistance.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IncreaseThrowResistance" << endl;
-			}
+			utils::Log("Found pattern: IncreaseThrowResistance");
 			auto match = incThrowResistance.get_one();
 			void *incAddr = match.get<void>(4);
 			void *retAddr = (void *)((uintptr_t)incAddr + 8);
@@ -348,9 +329,7 @@ void OnInitializeHook()
 		*/
 		auto decHoldPower = pattern("44 8d 47 06 eb 37 fe 8b 5e 1b 00 00");
 		if (decHoldPower.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: DecreaseHoldPower" << endl;
-			}
+			utils::Log("Found pattern: DecreaseHoldPower");
 			auto match = decHoldPower.get_one();
 			void *decAddr = match.get<void>(6);
 			void *retAddr = (void *)((uintptr_t)decAddr + 6);
@@ -424,9 +403,7 @@ void OnInitializeHook()
 		*/
 		auto chargeFeelTheHeat = pattern("ba 2c 01 00 00 ff 90 18 03 00 00");
 		if (chargeFeelTheHeat.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: ChargeFeelTheHeat" << endl;
-			}
+			utils::Log("Found pattern: ChargeFeelTheHeat");
 			auto match = chargeFeelTheHeat.get_one();
 			void *callAddr = match.get<void>(5);
 			Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
@@ -436,12 +413,10 @@ void OnInitializeHook()
 	}
 
 	// log current time to file to get some feedback once hook is done
-	if (ofs.is_open()) {
-		ofs << "Hook done!" << endl;
-		if (s_Debug) {
-			ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
-		}
-		ofs << "Local: " << utils::TzString() << endl;
-		ofs << "UTC:   " << utils::UTCString() << endl;
+	utils::Log("Hook done!");
+	if (s_Debug) {
+		utils::Log(format("\nConfig path: \"{:s}\"", config.path));
 	}
+	utils::Log(format("Local: {:s}", utils::TzString()));
+	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);
 }
