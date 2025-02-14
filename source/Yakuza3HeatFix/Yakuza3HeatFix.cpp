@@ -4,17 +4,12 @@
 #define WINVER 0x0601
 #define _WIN32_WINNT 0x0601
 
-#include <chrono>
-#include <filesystem>
 #include <format>
-#include <fstream>
-#include <windows.h>
-#include <ShlObj.h>
-
 #include "Utils/MemoryMgr.h"
 #include "Utils/Trampoline.h"
 #include "Utils/Patterns.h"
 #include "config.h"
+#include "utils.h"
 
 #if _DEBUG
 static constexpr bool s_Debug = true;
@@ -25,16 +20,12 @@ static constexpr bool s_Debug = false;
 
 namespace HeatFix {
 	using namespace std;
-	using namespace std::chrono;
-	static const auto tz = current_zone();
-	static ofstream ofs1, ofs2;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
 	static string dbg_msg;
-	static bool logFailed = false;
 
 	/*
 	* Parameter types aren't correct but it shouldn't matter for our purposes.
-	* param1 is probably a pointer to some kind of class instance
+	* param1 is probably a pointer to the player actor object
 	* No clue what the other 3 are, but all 4 parameters seem to be 8 bytes wide.
 	*/
 	static void(*origHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
@@ -78,25 +69,11 @@ namespace HeatFix {
 		isCombatInTransition &= 0x4000000; // Seems to be != 0 during combat intro or when fading to black after the player dies
 
 		if (s_Debug) {
-			if (!ofs1.is_open() && !logFailed) {
-				ofs1 = ofstream("Yakuza3HeatFix_Debug1.txt", ios::out | ios::trunc | ios::binary);
-			}
-			if (!ofs2.is_open() && !logFailed) {
-				ofs2 = ofstream("Yakuza3HeatFix_Debug2.txt", ios::out | ios::trunc | ios::binary);
-			}
-			if (!ofs1.is_open() || !ofs2.is_open()) {
-				logFailed = true; // don't keep on trying to write logs if open failed (e.g. in case of missing write permissions)
-			}
-			else {
-				const auto utcNow = system_clock::now();
-				const auto tzNow = tz->to_local(utcNow);
-				const string str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", tzNow);
-				dbg_msg = format("- TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}", 
-					str_TzNow, IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
-				ofs1 << "PatchedHeatFunc: " << dbg_Counter1++ << dbg_msg << endl;
-				if (counter % 2 == 0) {
-					ofs2 << "OrigHeatFunc: " << dbg_Counter2++ << dbg_msg << endl;
-				}
+			dbg_msg = format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
+				utils::TzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
+			utils::Log(format("PatchedHeatFunc: {:d} - {:s}", dbg_Counter1++, dbg_msg), 1);
+			if (counter % 2 == 0) {
+				utils::Log(format("OrigHeatFunc: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
 			}
 		}
 
@@ -106,9 +83,7 @@ namespace HeatFix {
 		}
 		else if (counter == 1 && (IsCombatInactive() || isCombatPausedByTutorial || IsActorDead(param1) || isCombatInTransition || isCombatFinished)) {
 			if (s_Debug) {
-				if (ofs2.is_open()) {
-					ofs2 << "Fast UpdateHeat: " << dbg_Counter2++ << dbg_msg << endl;
-				}
+				utils::Log(format("Fast UpdateHeat: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
 			}
 			// UpdateHeat() won't change the Heat value in these cases, but will still execute some code.
 			// Since I don't know how important that code is, we'll call UpdateHeat() immediately instead of waiting for the next frame/update.
@@ -148,7 +123,6 @@ void OnInitializeHook()
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 	const Config config = loadConfig();
-	ofstream ofs = ofstream(format("{:s}{:s}", rsc_Name, ".txt"), ios::binary | ios::trunc | ios::out);
 
 	// Game detection taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
 	enum class Game
@@ -179,24 +153,17 @@ void OnInitializeHook()
 
 	// Check if patch should be disabled
 	if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
-		if (ofs.is_open()) {
-			using namespace std::chrono;
-			const auto utcNow = system_clock::now();
-			const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-			const auto tzNow = HeatFix::tz->to_local(utcNow);
-			const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-			if (game != Game::Yakuza3) {
-				ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
-			}
-			else {
-				ofs << "HeatFix was disabled!" << endl;
-			}
-			if (s_Debug) {
-				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
-			}
-			ofs << "Local: " << str_TzNow << endl;
-			ofs << "UTC:   " << str_UtcNow << endl;
+		if (game != Game::Yakuza3) {
+			utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
 		}
+		else {
+			utils::Log(format("{:s} was disabled!", rsc_Name));
+		}
+		if (s_Debug) {
+			utils::Log(format("\nConfig path: \"{:s}\"", config.path));
+		}
+		utils::Log(format("Local: {:s}", utils::TzString()));
+		utils::Log(format("UTC:   {:s}", utils::UTCString()));
 		return;
 	}
 
@@ -212,6 +179,13 @@ void OnInitializeHook()
 	*/
 	{
 		using namespace HeatFix;
+
+		if (s_Debug) {
+			// Open debug logfile streams (not necessary but will save some time on the first real log message)
+			utils::Log("", 1);
+			utils::Log("", 2);
+		}
+
 		/*
 		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00 f7 80 54 03
 		* 
@@ -219,9 +193,7 @@ void OnInitializeHook()
 		*/
 		auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00 f7 80 54 03");
 		if (updateHeat.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: UpdateHeat" << endl;
-			}
+			utils::Log("Found pattern: UpdateHeat");
 			auto match = updateHeat.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
 			ReadCall(match.get<void>(), origHeatFunc);
@@ -236,9 +208,7 @@ void OnInitializeHook()
 		*/
 		auto playerInCombat = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
 		if (playerInCombat.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IsPlayerInCombat" << endl;
-			}
+			utils::Log("Found pattern: IsPlayerInCombat");
 			auto match = playerInCombat.get_one();
 			ReadCall(match.get<void>(10), IsPlayerInCombat);
 		}
@@ -251,9 +221,7 @@ void OnInitializeHook()
 		*/
 		auto combatInactive = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");
 		if (combatInactive.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IsCombatInactive" << endl;
-			}
+			utils::Log("Found pattern: IsCombatInactive");
 			auto match = combatInactive.get_one();
 			ReadCall(match.get<void>(), IsCombatInactive);
 		}
@@ -266,26 +234,17 @@ void OnInitializeHook()
 		*/
 		auto globalPattern = pattern("48 8b 0d ? ? ? ? 39 41 08 0f 85");
 		if (globalPattern.count_hint(1).size() == 1) {
-			if (ofs.is_open()) {
-				ofs << "Found pattern: IsCombatFinished" << endl;
-			}
+			utils::Log("Found pattern: IsCombatFinished");
 			auto match = globalPattern.get_one();
 			ReadOffsetValue(match.get<void>(3), globalPointer);
 		}
 	}
 
 	// log current time to file to get some feedback once hook is done
-	if (ofs.is_open()) {
-		using namespace std::chrono;
-		const auto utcNow = system_clock::now();
-		const auto str_UtcNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(utcNow));
-		const auto tzNow = HeatFix::tz->to_local(utcNow);
-		const auto str_TzNow = format("{:%Y/%m/%d %H:%M:%S}", floor<seconds>(tzNow));
-		ofs << "Hook done!" << endl;
-		if (s_Debug) {
-			ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
-		}
-		ofs << "Local: " << str_TzNow << endl;
-		ofs << "UTC:   " << str_UtcNow << endl;
+	utils::Log("Hook done!");
+	if (s_Debug) {
+		utils::Log(format("\nConfig path: \"{:s}\"", config.path));
 	}
+	utils::Log(format("Local: {:s}", utils::TzString()));
+	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);
 }

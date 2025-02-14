@@ -38,28 +38,39 @@ namespace utils {
 	//
 
 	static map<int, ofstream> logfileMap;
+	static bool logFailed = false;
 
 	void Log(string_view msg, const int channel) {
 		string filename;
 		if (!logfileMap.contains(channel)) {
-			if (channel == -1) {
-				filename = format("{:s}.txt", rsc_Name);
+			if (!logFailed) {
+				if (channel == -1) {
+					filename = format("{:s}.txt", rsc_Name);
+				}
+				else {
+					filename = format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
+				}
+				logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::trunc);
+				if (!logfileMap[channel].is_open()) {
+					logFailed = true; // Couldn't open file for writing, better not try again
+				}
 			}
-			else {
-				filename = format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
-			}
-			logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::trunc);
 		}
-		else if (!logfileMap[channel].is_open()) {
-			if (channel == -1) {
-				filename = format("{:s}.txt", rsc_Name);
+		else {
+			if ((!logfileMap[channel].is_open() && !logFailed)) {
+				if (channel == -1) {
+					filename = format("{:s}.txt", rsc_Name);
+				}
+				else {
+					filename = format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
+				}
+				logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::app);
+				if (!logfileMap[channel].is_open()) {
+					logFailed = true; // Couldn't open file for writing, better not try again
+				}
 			}
-			else {
-				filename = format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
-			}
-			logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::app);
 		}
-		if (!msg.empty() && logfileMap.contains(channel) && logfileMap[channel].is_open()) {
+		if (!msg.empty() && !logFailed) {
 			logfileMap[channel] << msg << endl;
 		}
 	}
