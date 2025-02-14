@@ -86,8 +86,8 @@ namespace EasySpam {
 			if (addHeat != addHeatFunc) {
 				DebugBreak();
 			}
-			if (ofs3.is_open()) {
-				ofs3 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - newChargeAmount: {:d} - result: {:d}", 
+			if (ofs4.is_open()) {
+				ofs4 << format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - newChargeAmount: {:d} - result: {:d}", 
 					getTzString_ms(), dbg_Counter3++, oldChargeAmount, newChargeAmount, result) << endl;
 			}
 		}
@@ -105,8 +105,8 @@ namespace EasySpam {
 			if (oldHoldPower > 40) {
 				DebugBreak(); // Anything higher than ~20 is probably wrong
 			}
-			if (ofs2.is_open()) {
-				ofs2 << format("PatchedDecHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - newHoldPower: {:d}", getTzString_ms(), dbg_Counter2++, oldHoldPower, newHoldPower) << endl;
+			if (ofs3.is_open()) {
+				ofs3 << format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - newHoldPower: {:d}", getTzString_ms(), dbg_Counter2++, oldHoldPower, newHoldPower) << endl;
 			}
 		}
 
@@ -126,8 +126,8 @@ namespace EasySpam {
 			if (oldThrowRes > 80) {
 				DebugBreak(); // Anything higher than ~40 is probably wrong
 			}
-			if (ofs1.is_open()) {
-				ofs1 << format("PatchedIncThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - newThrowRes: {:d}", getTzString_ms(), dbg_Counter1++, oldThrowRes, newThrowRes) << endl;
+			if (ofs2.is_open()) {
+				ofs2 << format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - newThrowRes: {:d}", getTzString_ms(), dbg_Counter1++, oldThrowRes, newThrowRes) << endl;
 			}
 		}
 
@@ -326,10 +326,10 @@ void OnInitializeHook()
 	if ((game != Game::Yakuza3 && !config.Force) || !config.Enable) {
 		if (ofs.is_open()) {
 			if (game != Game::Yakuza3) {
-				ofs << "Game is NOT Yakuza 3, HeatFix was disabled!" << endl;
+				ofs << format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name) << endl;
 			}
 			else {
-				ofs << "HeatFix was disabled!" << endl;
+				ofs << format("{:s} was disabled!", rsc_Name) << endl;
 			}
 			if (s_Debug) {
 				ofs << endl << format("Config path: \"{:s}\"", config.path) << endl;
@@ -356,7 +356,7 @@ void OnInitializeHook()
 			ofs1 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug1.txt"), ios::out | ios::trunc | ios::binary);
 			ofs2 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug2.txt"), ios::out | ios::trunc | ios::binary);
 			ofs3 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug3.txt"), ios::out | ios::trunc | ios::binary);
-			//ofs4 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug4.txt"), ios::out | ios::trunc | ios::binary);
+			ofs4 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug4.txt"), ios::out | ios::trunc | ios::binary);
 
 			// GetEnemyThrowResistance - to verify we're calling the correct function
 			auto enemyThrowCheck = pattern("0f b6 81 ba 1c 00 00 c3");
@@ -378,6 +378,7 @@ void OnInitializeHook()
 		* 
 		* Call to function that returns the throw "resistance" of the enemy that the player is trying to throw.
 		* Essentially the number of keypresses required to overpower and successfully throw the enemy.
+		* Once the player's keypress counter is >= the enemy's throw resistance, the enemy will be thrown.
 		* Won't be called for standard thugs since those can be thrown immediately.
 		*/
 		auto enemyThrowResistance = pattern("ff 92 40 0b 00 00 3a d8");
@@ -416,8 +417,8 @@ void OnInitializeHook()
 			* Inject call to our function in order to modify how/when the enemy's throw resistance increases.
 			* Now - it is obviously entirely unnecessary to inject a function call here,
 			* since we can simply change the contents of RAX in assembly before writing them to memory.
-			* But I like being able to write a log message whenever the game hits that code and I also wanna
-			* be able to modify the return value depending on the settings loaded from the JSON configuration file.
+			* But I like being able to write a log message whenever the game hits that code and I also wanna be able
+			* to easily modify the return value depending on the settings loaded from the JSON configuration file.
 			* 
 			* Maybe I'm being dumb but I see no better way to inject a call to our function
 			* while guaranteeing that the contents of all registers will stay the same. Basically:
@@ -518,7 +519,7 @@ void OnInitializeHook()
 			const uint8_t payload[] = {
 				0x50, // push rax
 				0x51, // push rcx
-				0x0f, 0xb6, 0x8b, 0x5e, 0x1b, 0x00, 0x00, // movzx ecx, BYTE PTR[rbx + 0x1b5e] (copy hold power to RCX/param1)
+				0x0f, 0xb6, 0x8b, 0x5e, 0x1b, 0x00, 0x00, // movzx ecx, BYTE PTR[rbx + 0x1b5e] (copy current hold power to RCX/param1)
 				0x52, // push rdx
 				0x41, 0x50, // push r8
 				0x41, 0x51, // push r9
@@ -532,7 +533,7 @@ void OnInitializeHook()
 				0xff, 0xd0, // call rax
 				0x48, 0x83, 0xc4, 0x28, // add rsp, 0x28 ("unreserve" shadow space + manual alignment)
 				0x5c, // pop rsp (restore rsp from before 16-byte boundary alignment)
-				0x88, 0x83, 0x5e, 0x1b, 0x00, 0x00, // mov BYTE PTR[rbx + 0x1b5e], al (write return value to memory)
+				0x88, 0x83, 0x5e, 0x1b, 0x00, 0x00, // mov BYTE PTR[rbx + 0x1b5e], al (write return value/new hold power to memory)
 				0x3c, 0x00, // cmp al, 0x0 (check if return value was 0)
 				0x41, 0x5b, // pop r11
 				0x41, 0x5a, // pop r10
@@ -561,6 +562,9 @@ void OnInitializeHook()
 
 		/*
 		* ba 2c 01 00 00 ff 90 18 03 00 00
+		* 
+		* During the charge "section" of "Feel the Heat" each press of the charge button will call the
+		* AddHeat() function in order to add a fixed amount of Heat to the current Heat value.
 		*/
 		auto chargeFeelTheHeat = pattern("ba 2c 01 00 00 ff 90 18 03 00 00");
 		if (chargeFeelTheHeat.count_hint(1).size() == 1) {
