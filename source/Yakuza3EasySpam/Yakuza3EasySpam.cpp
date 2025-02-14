@@ -61,6 +61,40 @@ namespace EasySpam {
 	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
 	GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
+	typedef uint8_t(*AddHeatType)(uintptr_t, int32_t);
+	AddHeatType addHeatFunc = nullptr;
+
+	// param1 here is the address of the player actor object
+	static uint8_t PatchedChargeFeelTheHeat(uintptr_t param1, int32_t oldChargeAmount) {
+		// CALL qword ptr [param_1 + 0x318]
+		uintptr_t pAddHeat = *(uintptr_t *)(param1);
+		pAddHeat = *(uintptr_t *)(pAddHeat + 0x318);
+		const AddHeatType addHeat = (AddHeatType)pAddHeat;
+
+		int32_t newChargeAmount = 32000; // just need some sensible upper limit (MAX Heat in Chapter 1 seems to be 8000)
+		if ((oldChargeAmount * 2) < newChargeAmount) {
+			newChargeAmount = oldChargeAmount * 2;
+		}
+		/*
+		* As far as I can tell - result should always be == 1, unless:
+		* - newChargeAmount > 0 && current Heat == MAX Heat (Trying to add Heat, but Heat is already full)
+		* - newChargeAmount < 0 && current Heat == 0.0f (Trying to subtract Heat, but Heat is already empty)
+		*/
+		const uint8_t result = addHeat(param1, newChargeAmount);
+
+		if (s_Debug) {
+			if (addHeat != addHeatFunc) {
+				DebugBreak();
+			}
+			if (ofs3.is_open()) {
+				ofs3 << format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - newChargeAmount: {:d} - result: {:d}", 
+					getTzString_ms(), dbg_Counter3++, oldChargeAmount, newChargeAmount, result) << endl;
+			}
+		}
+
+		return result;
+	}
+
 	static uint8_t PatchedDecHoldPower(uint8_t oldHoldPower) {
 		uint8_t newHoldPower = 0;
 		if (oldHoldPower > 2) {
@@ -100,7 +134,7 @@ namespace EasySpam {
 		return newThrowRes;
 	}
 
-	// param1 here is a pointer to the actor object of the enemy that the player is trying to throw
+	// param1 here points to the actor object of the enemy that the player is trying to throw
 	static uint8_t PatchedGetEnemyThrowResistance(uintptr_t param1) {
 		// CALL qword ptr[param_1 + 0xb40]
 		uintptr_t pGetEnemyThrowResistance = *(uintptr_t *)(param1);
@@ -321,7 +355,7 @@ void OnInitializeHook()
 		if (s_Debug) {
 			ofs1 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug1.txt"), ios::out | ios::trunc | ios::binary);
 			ofs2 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug2.txt"), ios::out | ios::trunc | ios::binary);
-			//ofs3 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug3.txt"), ios::out | ios::trunc | ios::binary);
+			ofs3 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug3.txt"), ios::out | ios::trunc | ios::binary);
 			//ofs4 = ofstream(format("{:s}{:s}", rsc_Name, "_Debug4.txt"), ios::out | ios::trunc | ios::binary);
 
 			// GetEnemyThrowResistance - to verify we're calling the correct function
@@ -329,6 +363,13 @@ void OnInitializeHook()
 			if (enemyThrowCheck.count_hint(1).size() == 1) {
 				auto match = enemyThrowCheck.get_one();
 				enemyThrowResFunc = (GetEnemyThrowResistanceType)match.get<void>();
+			}
+
+			// AddHeat - to verify we're calling the correct function
+			auto addHeatPattern = pattern("48 89 5c 24 08 57 48 83 ec 30 48 8b 01 8b fa 48 8b d9 ff 90 20 03 00 00");
+			if (addHeatPattern.count_hint(1).size() == 1) {
+				auto match = addHeatPattern.get_one();
+				addHeatFunc = (AddHeatType)match.get<void>();
 			}
 		}
 
@@ -516,6 +557,21 @@ void OnInitializeHook()
 			WriteOffsetValue(space + sizeof(payload) - 5 - 3 - 4, retAddr);
 			WriteOffsetValue(space + sizeof(payload) - 4, retAddrIfZero);
 			InjectHook(decAddr, space, PATCH_JUMP);
+		}
+
+		/*
+		* ba 2c 01 00 00 ff 90 18 03 00 00
+		*/
+		auto chargeFeelTheHeat = pattern("ba 2c 01 00 00 ff 90 18 03 00 00");
+		if (chargeFeelTheHeat.count_hint(1).size() == 1) {
+			if (ofs.is_open()) {
+				ofs << "Found pattern: ChargeFeelTheHeat" << endl;
+			}
+			auto match = chargeFeelTheHeat.get_one();
+			void *callAddr = match.get<void>(5);
+			Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+			Nop(callAddr, 6);
+			InjectHook(callAddr, trampoline->Jump(PatchedChargeFeelTheHeat), PATCH_CALL);
 		}
 	}
 
