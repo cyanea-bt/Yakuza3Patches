@@ -45,9 +45,9 @@ Hook done!
 Swap `vs2019` for whatever version you are running on your system (e.g. `vs2022`).  
 
 ```
-git clone --recursive https://github.com/cyanea-bt/Yakuza3HeatFix.git
-cd Yakuza3HeatFix
+git clone --recursive https://github.com/cyanea-bt/Yakuza3Patches.git
+cd Yakuza3Patches
 premake5 vs2019
 cd build
-msbuild Yakuza3HeatFix.sln /t:Rebuild /m /p:Configuration=Release;Platform=Win64
+msbuild Yakuza3Patches.sln /t:Rebuild /m /p:Configuration=Release;Platform=Win64
 ```
