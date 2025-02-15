@@ -1,9 +1,12 @@
-#include <string>
+#include "nlohmann/json.hpp"
 
 
 namespace config {
+	using namespace std;
+	using json = nlohmann::ordered_json;
+
 	struct Config {
-		std::string path;
+		string path;
 		bool SaveRequired = false;
 		uint32_t Version = 1;
 		bool EnablePatch = true;
@@ -14,5 +17,7 @@ namespace config {
 		uint8_t FeelTheHeatChargeMulti = 2;
 	};
 
+	void to_json(json &j, const Config &e);
+	void from_json(const json &j, Config &e);
 	Config GetConfig();
 }
