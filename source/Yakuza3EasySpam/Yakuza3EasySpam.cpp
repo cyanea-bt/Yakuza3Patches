@@ -10,6 +10,7 @@
 #include "Utils/Patterns.h"
 #include "config.h"
 #include "utils.h"
+#include "Yakuza3.h"
 
 #if _DEBUG
 static constexpr bool s_Debug = true;
@@ -129,51 +130,12 @@ void OnInitializeHook()
 	using namespace std;
 	using namespace Memory;
 	using namespace hook;
-	using namespace config;
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 	s_Config = config::GetConfig();
 
-	// Game detection taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
-	enum class Game
-	{
-		Yakuza3,
-		Yakuza4,
-		Yakuza5, // Unsupported for now
-	} game;
-	{
-		// "4C 8D 05 ?? ?? ?? ?? 48 8B 15 ?? ?? ?? ?? 33 DB"
-		auto gameWindowName = pattern("4C 8D 05 ? ? ? ? 48 8B 15 ? ? ? ? 33 DB").count_hint(1);
-		if (gameWindowName.size() == 1)
-		{
-			// Read the window name from the pointer
-			void *match = gameWindowName.get_first(3);
-
-			const char *windowName;
-			ReadOffsetValue(match, windowName);
-			game = windowName == std::string_view("Yakuza 4") ? Game::Yakuza4 : Game::Yakuza3;
-		}
-		else
-		{
-			// Not found? Most likely Yakuza 5
-			// Not supported yet
-			game = Game::Yakuza5;
-		}
-	}
-
 	// Check if patch should be disabled
-	if ((game != Game::Yakuza3 && !s_Config.ForcePatch) || !s_Config.EnablePatch) {
-		if (game != Game::Yakuza3) {
-			utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
-		}
-		else {
-			utils::Log(format("{:s} was disabled!", rsc_Name));
-		}
-		if (s_Debug) {
-			utils::Log(format("\nConfig path: \"{:s}\"", s_Config.path));
-		}
-		utils::Log(format("Local: {:s}", utils::TzString()));
-		utils::Log(format("UTC:   {:s}", utils::UTCString()));
+	if (Yakuza3::ShouldDisablePatch()) {
 		return;
 	}
 
