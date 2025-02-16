@@ -122,7 +122,7 @@ namespace LegacyHeatFix {
 
 namespace HeatFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0;
 
 	typedef float(*GetActorFloatType)(void **);
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
@@ -142,7 +142,7 @@ namespace HeatFix {
 
 		if (s_Debug) {
 			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - vfTable: {} - getCurHeat: {} - curHeat: {}",
-				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getCurHeat, curHeat), 2);
+				"GetCurrentHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getCurHeat, curHeat), 1);
 		}
 		return curHeat;
 	}
@@ -159,15 +159,24 @@ namespace HeatFix {
 			}
 		}
 		float maxHeat = getMaxHeat(playerActor);
-		// just for testing purposes
-		float curHeat = GetCurrentHeatValue(playerActor);
-		(void)curHeat;
 
 		if (s_Debug) {
 			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - vfTable: {} - getMaxHeat: {} - maxHeat: {}",
-				"GetMaxHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getMaxHeat, maxHeat), 1);
+				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getMaxHeat, maxHeat), 2);
 		}
 		return maxHeat;
+	}
+
+	static uint16_t GetNewHeatDrainTimer(void **playerActor, uint16_t heatDrainTimer) {
+		// MOVZX EDI,word ptr [param_1 + 0x14c8]
+		uint16_t oldHeatDrainTimer = *(uint16_t *)((uintptr_t)playerActor + 0x14c8);
+
+		if (s_Debug) {
+			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - oldHeatDrainTimer: {:d} - heatDrainTimer: {:d}", 
+				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, oldHeatDrainTimer, heatDrainTimer), 3);
+		}
+		//return heatDrainTimer;
+		return oldHeatDrainTimer; // for testing purposes - Heat will never drain on its own, since the drain timer won't increase
 	}
 
 	static float GetNewHeatValue(void *param1, float heatVal, float unkXMM2, float unkXMM3) {
@@ -175,11 +184,6 @@ namespace HeatFix {
 		(void)unkXMM2;
 		(void)unkXMM3;
 		return heatVal; // not implemented yet
-	}	
-
-	static uint8_t GetNewHeatDrainTimer(void *param1, uint8_t heatDrainTimer) {
-		(void)param1;
-		return heatDrainTimer; // not implemented yet
 	}
 }
 
@@ -287,6 +291,7 @@ void OnInitializeHook()
 				// Open debug logfile streams (not necessary but will save some time on the first real log message)
 				utils::Log("", 1);
 				utils::Log("", 2);
+				utils::Log("", 3);
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -311,9 +316,45 @@ void OnInitializeHook()
 				utils::Log("Found pattern: FinalHeatCalc");
 				auto match = finalHeatCalc.get_one();
 				void *callAddr = match.get<void>(4);
+				void *retAddr = match.get<void>(10);
 				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
 				Nop(callAddr, 6);
-				InjectHook(callAddr, trampoline->Jump(GetMaxHeatValue), PATCH_CALL);
+
+				const uint8_t payload[] = {
+					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetCurrentHeatValue
+					0xff, 0xd0, // call rax
+					0x48, 0x89, 0xd9, // mov rcx, rbx (copy address of playerActor to param1)
+					0x48, 0x89, 0xfa, // mov rdx, rdi (copy NEW heat drain timer to param2)
+					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetNewHeatDrainTimer
+					0xff, 0xd0, // call rax
+					0x89, 0xc7, // mov edi, eax (overwrite NEW heat drain timer with retVal from GetNewHeatDrainTimer)
+					0x48, 0x89, 0xd9, // mov rcx, rbx (copy address of playerActor to param1)
+					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetMaxHeatValue
+					0xff, 0xd0, // call rax
+					0xe9, 0x00, 0x00, 0x00, 0x00 // jmp retAddr
+				};
+				/*
+				* Shortly after we return to the game's own code, the contents of (E)DI will be written to memory
+				* as the new value for HeatUpdate()'s drain timer. This is the write instruction:
+				* MOV word ptr [RBX + 0x14c8],DI
+				*/
+
+				std::byte *space = trampoline->RawSpace(sizeof(payload));
+				memcpy(space, payload, sizeof(payload));
+
+				auto pGetCurrentHeatValue = utils::GetFuncAddr(GetCurrentHeatValue);
+				memcpy(space + 2, &pGetCurrentHeatValue, sizeof(pGetCurrentHeatValue));
+
+				auto pGetNewHeatDrainTimer = utils::GetFuncAddr(GetNewHeatDrainTimer);
+				// 10 + 2 + 3 + 3 + 2 = 20
+				memcpy(space + 20, &pGetNewHeatDrainTimer, sizeof(pGetNewHeatDrainTimer));
+
+				auto pGetMaxHeatValue = utils::GetFuncAddr(GetMaxHeatValue);
+				// 10 + 2 + 3 + 3 + 10 + 2 + 2 + 3 + 2 = 37
+				memcpy(space + 37, &pGetMaxHeatValue, sizeof(pGetMaxHeatValue));
+
+				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+				InjectHook(callAddr, space, PATCH_JUMP);
 			}
 		}
 	}
