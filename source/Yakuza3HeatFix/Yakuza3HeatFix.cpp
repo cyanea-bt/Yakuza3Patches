@@ -124,7 +124,8 @@ namespace HeatFix {
 	using namespace std;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0;
 	static uint8_t drainLimiter = 1; 
-	static const uint8_t drainTimeMulti = 2;
+	static constexpr uint8_t drainTimeMulti = 2;
+	static constexpr uint16_t MAX_DrainTimer = 0x73;
 
 	typedef float(*GetActorFloatType)(void **);
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
@@ -193,7 +194,7 @@ namespace HeatFix {
 
 		uint16_t newHeatDrainTimer = heatDrainTimer;
 		const uint8_t oldDrainLimiter = drainLimiter; // for logging purposes
-		if (heatDrainTimer == (oldHeatDrainTimer + 1)) {
+		if (heatDrainTimer == (oldHeatDrainTimer + 1) && heatDrainTimer != MAX_DrainTimer) {
 			if (drainLimiter == drainTimeMulti) {
 				drainLimiter = 1;
 			}
