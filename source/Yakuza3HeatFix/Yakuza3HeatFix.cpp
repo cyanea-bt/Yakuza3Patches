@@ -20,7 +20,7 @@ static constexpr bool s_Debug = false;
 static config::Config s_Config;
 
 
-namespace HeatFix {
+namespace LegacyHeatFix {
 	using namespace std;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
 	static string dbg_msg;
@@ -30,7 +30,9 @@ namespace HeatFix {
 	* param1 is probably a pointer to the player actor object
 	* No clue what the other 3 are, but all 4 parameters seem to be 8 bytes wide.
 	*/
-	static void(*origHeatFunc)(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4);
+	typedef void(*UpdateHeatType)(uintptr_t, uintptr_t, uintptr_t, uintptr_t);
+	static UpdateHeatType origHeatFunc = nullptr;
+	static UpdateHeatType verifyHeatFunc = nullptr;
 	static int counter = 0;
 
 	static uint32_t(*IsPlayerInCombat)();
@@ -71,6 +73,9 @@ namespace HeatFix {
 		isCombatInTransition &= 0x4000000; // Seems to be != 0 during combat intro or when fading to black after the player dies
 
 		if (s_Debug) {
+			if (origHeatFunc != verifyHeatFunc || verifyHeatFunc == nullptr) {
+				DebugBreak();
+			}
 			dbg_msg = format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
 				utils::TzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
 			utils::Log(format("PatchedHeatFunc: {:d} - {:s}", dbg_Counter1++, dbg_msg), 1);
@@ -115,6 +120,69 @@ namespace HeatFix {
 	}
 }
 
+namespace HeatFix {
+	using namespace std;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
+
+	typedef float(*GetActorFloatType)(void **);
+	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
+
+	static float GetCurrentHeatValue(void **playerActor) {
+		// MOV RAX,qword ptr [param_1]
+		// CALL qword ptr [RAX + 0x338]
+		uintptr_t *vfTable = (uintptr_t *)*playerActor;
+		GetActorFloatType getCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
+
+		if (s_Debug) {
+			if (getCurHeat != verifyGetCurHeat || verifyGetCurHeat == nullptr) {
+				DebugBreak();
+			}
+		}
+		float curHeat = getCurHeat(playerActor);
+
+		if (s_Debug) {
+			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - vfTable: {} - getCurHeat: {} - curHeat: {}",
+				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getCurHeat, curHeat), 2);
+		}
+		return curHeat;
+	}
+
+	static float GetMaxHeatValue(void **playerActor) {
+		// MOV RAX,qword ptr [param_1]
+		// CALL qword ptr [RAX + 0x340]
+		uintptr_t *vfTable = (uintptr_t *)*playerActor;
+		GetActorFloatType getMaxHeat = (GetActorFloatType)vfTable[0x340 / sizeof(uintptr_t)];
+
+		if (s_Debug) {
+			if (getMaxHeat != verifyGetMaxHeat || verifyGetMaxHeat == nullptr) {
+				DebugBreak();
+			}
+		}
+		float maxHeat = getMaxHeat(playerActor);
+		// just for testing purposes
+		float curHeat = GetCurrentHeatValue(playerActor);
+		(void)curHeat;
+
+		if (s_Debug) {
+			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - vfTable: {} - getMaxHeat: {} - maxHeat: {}",
+				"GetMaxHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getMaxHeat, maxHeat), 1);
+		}
+		return maxHeat;
+	}
+
+	static float GetNewHeatValue(void *param1, float heatVal, float unkXMM2, float unkXMM3) {
+		(void)param1;
+		(void)unkXMM2;
+		(void)unkXMM3;
+		return heatVal; // not implemented yet
+	}	
+
+	static uint8_t GetNewHeatDrainTimer(void *param1, uint8_t heatDrainTimer) {
+		(void)param1;
+		return heatDrainTimer; // not implemented yet
+	}
+}
+
 
 void OnInitializeHook()
 {
@@ -130,76 +198,123 @@ void OnInitializeHook()
 		return;
 	}
 
-	/*
-	* Hook/Redirect the game's UpdateHeat function to our own function.
-	* As far as I can tell - UpdateHeat is only called while the game is unpaused.
-	* Heat gain caused by using an Item (e.g. Staminan) from the menu won't call this function.
-	* 
-	* SHA-1 checksums for compatible binaries:
-	* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
-	* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
-	* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
-	*/
-	{
-		using namespace HeatFix;
-
-		if (s_Debug) {
-			// Open debug logfile streams (not necessary but will save some time on the first real log message)
-			utils::Log("", 1);
-			utils::Log("", 2);
-		}
-
+	if (s_Config.UseOldPatch) {
 		/*
-		* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00 f7 80 54 03
-		* 
-		* Pattern for the player actor's call to UpdateHeat().
+		* Hook/Redirect the game's UpdateHeat function to our own function.
+		* As far as I can tell - UpdateHeat is only called while the game is unpaused.
+		* Heat gain caused by using an Item (e.g. Staminan) from the menu won't call this function.
+		*
+		* SHA-1 checksums for compatible binaries:
+		* 20d9614f41dc675848be46920974795481bdbd3b Yakuza3.exe (Steam)
+		* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
+		* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
 		*/
-		auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00 f7 80 54 03");
-		if (updateHeat.count_hint(1).size() == 1) {
-			utils::Log("Found pattern: UpdateHeat");
-			auto match = updateHeat.get_one();
-			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
-			ReadCall(match.get<void>(), origHeatFunc);
-			InjectHook(match.get<void>(), trampoline->Jump(PatchedHeatFunc), PATCH_CALL);
-		}
+		{
+			using namespace LegacyHeatFix;
 
-		/*
-		* 48 81 ec c0 00 00 00 48 8b d9 e8 ?? ?? ?? ?? 85 c0
-		* 
-		* UpdateHeat() returns right at the start if this function returns 0.
-		* Seems to always return 0, unless the player is in combat.
-		*/
-		auto playerInCombat = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
-		if (playerInCombat.count_hint(1).size() == 1) {
-			utils::Log("Found pattern: IsPlayerInCombat");
-			auto match = playerInCombat.get_one();
-			ReadCall(match.get<void>(10), IsPlayerInCombat);
-		}
+			if (s_Debug) {
+				// Open debug logfile streams (not necessary but will save some time on the first real log message)
+				utils::Log("", 1);
+				utils::Log("", 2);
 
-		/*
-		* e8 ?? ?? ?? ?? f7 83 d8 13 00 00 00 00 01 00
-		* 
-		* Most of UpdateHeat()'s code is skipped if this function returns != 0
-		* Seems to return 1 if combat is inactive, e.g. during Heat moves/cutscenes
-		*/
-		auto combatInactive = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");
-		if (combatInactive.count_hint(1).size() == 1) {
-			utils::Log("Found pattern: IsCombatInactive");
-			auto match = combatInactive.get_one();
-			ReadCall(match.get<void>(), IsCombatInactive);
-		}
+				// UpdateHeat - verify we're calling the correct function
+				auto updateHeatCheck = pattern("40 53 48 81 ec c0 00 00 00 48 8b d9 e8");
+				if (updateHeatCheck.count_hint(1).size() == 1) {
+					auto match = updateHeatCheck.get_one();
+					verifyHeatFunc = (UpdateHeatType)match.get<void>();
+				}
+			}
 
-		/*
-		* 48 8b 0d ?? ?? ?? ?? 39 41 08 0f 85
-		* 
-		* Seems to point to a variable that is == 0 while combat is ongoing and == 1
-		* when combat is finished (i.e. either the player or all enemies are knocked out)
-		*/
-		auto globalPattern = pattern("48 8b 0d ? ? ? ? 39 41 08 0f 85");
-		if (globalPattern.count_hint(1).size() == 1) {
-			utils::Log("Found pattern: IsCombatFinished");
-			auto match = globalPattern.get_one();
-			ReadOffsetValue(match.get<void>(3), globalPointer);
+			/*
+			* e8 ?? ?? ?? ?? 48 8b 83 d0 13 00 00 f7 80 54 03
+			*
+			* Pattern for the player actor's call to UpdateHeat().
+			*/
+			auto updateHeat = pattern("e8 ? ? ? ? 48 8b 83 d0 13 00 00 f7 80 54 03");
+			if (updateHeat.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: UpdateHeat");
+				auto match = updateHeat.get_one();
+				Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
+				ReadCall(match.get<void>(), origHeatFunc);
+				InjectHook(match.get<void>(), trampoline->Jump(PatchedHeatFunc), PATCH_CALL);
+			}
+
+			/*
+			* 48 81 ec c0 00 00 00 48 8b d9 e8 ?? ?? ?? ?? 85 c0
+			*
+			* UpdateHeat() returns right at the start if this function returns 0.
+			* Seems to always return 0, unless the player is in combat.
+			*/
+			auto playerInCombat = pattern("48 81 ec c0 00 00 00 48 8b d9 e8 ? ? ? ? 85 c0");
+			if (playerInCombat.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: IsPlayerInCombat");
+				auto match = playerInCombat.get_one();
+				ReadCall(match.get<void>(10), IsPlayerInCombat);
+			}
+
+			/*
+			* e8 ?? ?? ?? ?? f7 83 d8 13 00 00 00 00 01 00
+			*
+			* Most of UpdateHeat()'s code is skipped if this function returns != 0
+			* Seems to return 1 if combat is inactive, e.g. during Heat moves/cutscenes
+			*/
+			auto combatInactive = pattern("e8 ? ? ? ? f7 83 d8 13 00 00 00 00 01 00");
+			if (combatInactive.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: IsCombatInactive");
+				auto match = combatInactive.get_one();
+				ReadCall(match.get<void>(), IsCombatInactive);
+			}
+
+			/*
+			* 48 8b 0d ?? ?? ?? ?? 39 41 08 0f 85
+			*
+			* Seems to point to a variable that is == 0 while combat is ongoing and == 1
+			* when combat is finished (i.e. either the player or all enemies are knocked out)
+			*/
+			auto globalPattern = pattern("48 8b 0d ? ? ? ? 39 41 08 0f 85");
+			if (globalPattern.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: IsCombatFinished");
+				auto match = globalPattern.get_one();
+				ReadOffsetValue(match.get<void>(3), globalPointer);
+			}
+		}
+	}
+	else {
+		{
+			using namespace HeatFix;
+
+			if (s_Debug) {
+				// Open debug logfile streams (not necessary but will save some time on the first real log message)
+				utils::Log("", 1);
+				utils::Log("", 2);
+
+				// GetCurrentHeatValue - verify we're calling the correct function
+				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
+				if (getCurHeatPattern.count_hint(1).size() == 1) {
+					auto match = getCurHeatPattern.get_one();
+					verifyGetCurHeat = (GetActorFloatType)match.get<void>();
+				}
+
+				// GetMaxHeatValue - verify we're calling the correct function
+				auto getMaxHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 0c c3");
+				if (getMaxHeatPattern.count_hint(1).size() == 1) {
+					auto match = getMaxHeatPattern.get_one();
+					verifyGetMaxHeat = (GetActorFloatType)match.get<void>();
+				}
+			}
+
+			/*
+			* c5 e2 5f f2 ff 90 40 03 00 00
+			*/
+			auto finalHeatCalc = pattern("c5 e2 5f f2 ff 90 40 03 00 00");
+			if (finalHeatCalc.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: FinalHeatCalc");
+				auto match = finalHeatCalc.get_one();
+				void *callAddr = match.get<void>(4);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+				Nop(callAddr, 6);
+				InjectHook(callAddr, trampoline->Jump(GetMaxHeatValue), PATCH_CALL);
+			}
 		}
 	}
 

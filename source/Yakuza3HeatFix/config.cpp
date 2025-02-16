@@ -11,6 +11,7 @@ namespace config {
 		j["Version"] = e.Version;
 		j["EnablePatch"] = e.EnablePatch;
 		j["ForcePatch"] = e.ForcePatch;
+		j["UseOldPatch"] = e.UseOldPatch;
 	}
 
 	void from_json(const json &j, Config &e) {
@@ -18,6 +19,7 @@ namespace config {
 		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
 		e.ForcePatch = jsonToBool(j.at("ForcePatch"), defaults.ForcePatch);
+		e.UseOldPatch = jsonToBool(j.at("UseOldPatch"), defaults.UseOldPatch);
 		if (json test = e; test != j) {
 			// Check if the converted config values differ from those in the JSON file.
 			// If input JSON contained invalid values, we should overwrite the config file.

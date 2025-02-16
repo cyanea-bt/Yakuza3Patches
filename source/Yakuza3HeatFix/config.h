@@ -11,6 +11,7 @@ namespace config {
 		uint32_t Version = 1;
 		bool EnablePatch = true;
 		bool ForcePatch = false;
+		bool UseOldPatch = false;
 	};
 
 	void to_json(json &j, const Config &e);
