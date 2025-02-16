@@ -123,6 +123,8 @@ namespace LegacyHeatFix {
 namespace HeatFix {
 	using namespace std;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0;
+	static uint8_t drainLimiter = 1; 
+	static const uint8_t drainTimeMulti = 2;
 
 	typedef float(*GetActorFloatType)(void **);
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
@@ -141,7 +143,7 @@ namespace HeatFix {
 		float curHeat = getCurHeat(playerActor);
 
 		if (s_Debug) {
-			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - vfTable: {} - getCurHeat: {} - curHeat: {}",
+			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getCurHeat: {:p} - curHeat: {:f}",
 				"GetCurrentHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getCurHeat, curHeat), 1);
 		}
 		return curHeat;
@@ -161,22 +163,56 @@ namespace HeatFix {
 		float maxHeat = getMaxHeat(playerActor);
 
 		if (s_Debug) {
-			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - vfTable: {} - getMaxHeat: {} - maxHeat: {}",
+			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getMaxHeat: {:p} - maxHeat: {:f}",
 				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getMaxHeat, maxHeat), 2);
 		}
 		return maxHeat;
 	}
 
-	static uint16_t GetNewHeatDrainTimer(void **playerActor, uint16_t heatDrainTimer) {
+	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t heatDrainTimer) {
 		// MOVZX EDI,word ptr [param_1 + 0x14c8]
-		uint16_t oldHeatDrainTimer = *(uint16_t *)((uintptr_t)playerActor + 0x14c8);
+		const uint16_t oldHeatDrainTimer = *(uint16_t *)((uintptr_t)playerActor + 0x14c8);
+		
+		/*
+		uint16_t newHeatDrainTimer = 0;
+		if (heatDrainTimer == (oldHeatDrainTimer + 1)) {
+			if (drainLimiter == drainTimeMulti) {
+				newHeatDrainTimer = heatDrainTimer;
+				drainLimiter = 1;
+			}
+			else {
+				newHeatDrainTimer = oldHeatDrainTimer;
+				drainLimiter++;
+			}
+		}
+		else {
+			newHeatDrainTimer = heatDrainTimer;
+			drainLimiter = 0;
+		}
+		*/
+
+		uint16_t newHeatDrainTimer = heatDrainTimer;
+		const uint8_t oldDrainLimiter = drainLimiter; // for logging purposes
+		if (heatDrainTimer == (oldHeatDrainTimer + 1)) {
+			if (drainLimiter == drainTimeMulti) {
+				drainLimiter = 1;
+			}
+			else {
+				newHeatDrainTimer = oldHeatDrainTimer;
+				drainLimiter++;
+			}
+		}
+		else {
+			drainLimiter = 1;
+		}
 
 		if (s_Debug) {
-			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {} - oldHeatDrainTimer: {:d} - heatDrainTimer: {:d}", 
-				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, oldHeatDrainTimer, heatDrainTimer), 3);
+			utils::Log(format(
+				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainLimiter: {:d} - oldHeatDrainTimer: {:d} - heatDrainTimer: {:d} - newHeatDrainTimer: {:d}", 
+				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, drainTimeMulti, oldDrainLimiter, oldHeatDrainTimer, heatDrainTimer, newHeatDrainTimer), 3
+			);
 		}
-		//return heatDrainTimer;
-		return oldHeatDrainTimer; // for testing purposes - Heat will never drain on its own, since the drain timer won't increase
+		return newHeatDrainTimer;
 	}
 
 	static float GetNewHeatValue(void *param1, float heatVal, float unkXMM2, float unkXMM3) {
