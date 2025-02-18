@@ -27,6 +27,19 @@ project "Yakuza3EasySpam"
 	    "rsc_BuildID=0",
 	}
 
+project "Yakuza3EnemyAIFix"
+	kind "SharedLib"
+	targetextension ".asi"
+	language "C++"
+
+	defines { 
+	    "rsc_FullName=\"Yakuza3EnemyAIFix\"",
+	    "rsc_MajorVersion=0",
+	    "rsc_MinorVersion=0",
+	    "rsc_RevisionID=1",
+	    "rsc_BuildID=0",
+	}
+
 
 workspace "*"
 	configurations { "Debug", "Release", "Master" }
