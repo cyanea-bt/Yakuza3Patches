@@ -24,7 +24,8 @@ static config::Config s_Config;
 namespace HeatFix {
 	using namespace std;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0;
-	static uint8_t drainLimiter = 1; 
+	static uint8_t drainTimeLimiter = 1;
+	static uint16_t lastDrainTimer = 0;
 	static constexpr uint8_t drainTimeMulti = 2;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
 
@@ -42,7 +43,7 @@ namespace HeatFix {
 				DebugBreak();
 			}
 		}
-		float curHeat = getCurHeat(playerActor);
+		const float curHeat = getCurHeat(playerActor);
 
 		if (s_Debug) {
 			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getCurHeat: {:p} - curHeat: {:f}",
@@ -62,7 +63,7 @@ namespace HeatFix {
 				DebugBreak();
 			}
 		}
-		float maxHeat = getMaxHeat(playerActor);
+		const float maxHeat = getMaxHeat(playerActor);
 
 		if (s_Debug) {
 			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getMaxHeat: {:p} - maxHeat: {:f}",
@@ -71,50 +72,31 @@ namespace HeatFix {
 		return maxHeat;
 	}
 
-	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t heatDrainTimer) {
-		// MOVZX EDI,word ptr [param_1 + 0x14c8]
-		const uint16_t oldHeatDrainTimer = *(uint16_t *)((uintptr_t)playerActor + 0x14c8);
-		
-		/*
-		uint16_t newHeatDrainTimer = 0;
-		if (heatDrainTimer == (oldHeatDrainTimer + 1)) {
-			if (drainLimiter == drainTimeMulti) {
-				newHeatDrainTimer = heatDrainTimer;
-				drainLimiter = 1;
-			}
-			else {
-				newHeatDrainTimer = oldHeatDrainTimer;
-				drainLimiter++;
-			}
+	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t curDrainTimer) {
+		if (curDrainTimer != lastDrainTimer) {
+			drainTimeLimiter = 1; // drain timer got reset by another function
 		}
-		else {
-			newHeatDrainTimer = heatDrainTimer;
-			drainLimiter = 0;
-		}
-		*/
 
-		uint16_t newHeatDrainTimer = heatDrainTimer;
-		const uint8_t oldDrainLimiter = drainLimiter; // for logging purposes
-		if (heatDrainTimer == (oldHeatDrainTimer + 1) && heatDrainTimer != MAX_DrainTimer) {
-			if (drainLimiter == drainTimeMulti) {
-				drainLimiter = 1;
-			}
-			else {
-				newHeatDrainTimer = oldHeatDrainTimer;
-				drainLimiter++;
+		uint16_t newDrainTimer = curDrainTimer;
+		const uint8_t oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
+		if (drainTimeLimiter == drainTimeMulti) {
+			drainTimeLimiter = 1;
+			if (newDrainTimer < MAX_DrainTimer) {
+				newDrainTimer++;
 			}
 		}
 		else {
-			drainLimiter = 1;
+			drainTimeLimiter++;
 		}
 
 		if (s_Debug) {
 			utils::Log(format(
-				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainLimiter: {:d} - oldHeatDrainTimer: {:d} - heatDrainTimer: {:d} - newHeatDrainTimer: {:d}", 
-				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, drainTimeMulti, oldDrainLimiter, oldHeatDrainTimer, heatDrainTimer, newHeatDrainTimer), 3
+				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d}", 
+				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, drainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer), 3
 			);
 		}
-		return newHeatDrainTimer;
+		lastDrainTimer = newDrainTimer;
+		return newDrainTimer;
 	}
 
 	static float GetNewHeatValue(void *param1, float heatVal, float unkXMM2, float unkXMM3) {
@@ -169,6 +151,74 @@ void OnInitializeHook()
 			}
 
 			/*
+			* 66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd
+			*/
+			auto increaseDrainTimer = pattern("66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd");
+			if (increaseDrainTimer.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: IncreaseDrainTimer");
+				auto match = increaseDrainTimer.get_one();
+				void *patchAddr = match.get<void>(0);
+				void *retAddr = match.get<void>(14);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(patchAddr);
+				/*
+				* Nop these instructions:
+				* 0x66, 0x83, 0xff, 0x73 (cmp di, 0x73)
+				* 0x8d, 0x6f, 0x01 (lea ebp, [RDI + 0x1])
+				* 0x66, 0x0f, 0x43, 0xef (cmovnc bp, di)
+				* 0x0f, 0xb7, 0xfd (movzx edi, bp)
+				*/
+				Nop(patchAddr, 14);
+
+				/*
+				* - back up volatile registers
+				* - make sure not to mess up the stack/backed up registers
+				* - call function that returns new timer value
+				* - restore registers/stack
+				* - copy new timer value to EDI/EBP
+				* - return to next instruction in UpdateHeat()
+				*/
+				const uint8_t payload[] = {
+					0x50, // push rax
+					0x51, // push rcx
+					0x48, 0x89, 0xd9, // mov rcx, rbx (copy address of playerActor to param1)
+					0x52, // push rdx
+					0x89, 0xfa, // mov edx, edi (copy current timer to param2)
+					0x41, 0x50, // push r8
+					0x41, 0x51, // push r9
+					0x41, 0x52, // push r10
+					0x41, 0x53, // push r11
+					0x48, 0x89, 0xe0, // mov rax, rsp (back up rsp before alignment)
+					0x48, 0x83, 0xe4, 0xf0, // and rsp, -16 (align rsp to 16-byte boundary if necessary)
+					0x50, // push rax (push old rsp contents onto the stack, which will unalign rsp again)
+					0x48, 0x83, 0xec, 0x28, // sub rsp, 0x28 (0x20 shadow space for callee + 0x8 for stack alignment)
+					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetNewHeatDrainTimer
+					0xff, 0xd0, // call rax
+					0x48, 0x83, 0xc4, 0x28, // add rsp, 0x28 ("unreserve" shadow space + manual alignment)
+					0x5c, // pop rsp (restore rsp from before 16-byte boundary alignment)
+					0x41, 0x5b, // pop r11
+					0x41, 0x5a, // pop r10
+					0x41, 0x59, // pop r9
+					0x41, 0x58, // pop r8
+					0x5a, // pop rdx
+					0x59, // pop rcx
+					0x0f, 0xb7, 0xf8, // movzx edi, ax (copy new timer to EDI; will be written to memory towards the end of HeatUpdate)
+					0x58, // pop rax
+					0x89, 0xfd, // mov ebp, edi (copy new timer to EBP; will be checked right after the jmp below)
+					0xe9, 0x00, 0x00, 0x00, 0x00, // jmp retAddr
+				};
+
+				std::byte *space = trampoline->RawSpace(sizeof(payload));
+				memcpy(space, payload, sizeof(payload));
+
+				auto funcAddr = utils::GetFuncAddr(GetNewHeatDrainTimer);
+				// 1 + 1 + 3 + 1 + 2 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 30
+				memcpy(space + 30, &funcAddr, sizeof(funcAddr));
+
+				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+				InjectHook(patchAddr, space, PATCH_JUMP);
+			}
+
+			/*
 			* c5 e2 5f f2 ff 90 40 03 00 00
 			*/
 			auto finalHeatCalc = pattern("c5 e2 5f f2 ff 90 40 03 00 00");
@@ -183,11 +233,6 @@ void OnInitializeHook()
 				const uint8_t payload[] = {
 					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetCurrentHeatValue
 					0xff, 0xd0, // call rax
-					0x48, 0x89, 0xd9, // mov rcx, rbx (copy address of playerActor to param1)
-					0x48, 0x89, 0xfa, // mov rdx, rdi (copy NEW heat drain timer to param2)
-					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetNewHeatDrainTimer
-					0xff, 0xd0, // call rax
-					0x89, 0xc7, // mov edi, eax (overwrite NEW heat drain timer with retVal from GetNewHeatDrainTimer)
 					0x48, 0x89, 0xd9, // mov rcx, rbx (copy address of playerActor to param1)
 					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetMaxHeatValue
 					0xff, 0xd0, // call rax
@@ -205,13 +250,9 @@ void OnInitializeHook()
 				auto pGetCurrentHeatValue = utils::GetFuncAddr(GetCurrentHeatValue);
 				memcpy(space + 2, &pGetCurrentHeatValue, sizeof(pGetCurrentHeatValue));
 
-				auto pGetNewHeatDrainTimer = utils::GetFuncAddr(GetNewHeatDrainTimer);
-				// 10 + 2 + 3 + 3 + 2 = 20
-				memcpy(space + 20, &pGetNewHeatDrainTimer, sizeof(pGetNewHeatDrainTimer));
-
 				auto pGetMaxHeatValue = utils::GetFuncAddr(GetMaxHeatValue);
-				// 10 + 2 + 3 + 3 + 10 + 2 + 2 + 3 + 2 = 37
-				memcpy(space + 37, &pGetMaxHeatValue, sizeof(pGetMaxHeatValue));
+				// 10 + 2 + 3 + 2 = 17
+				memcpy(space + 17, &pGetMaxHeatValue, sizeof(pGetMaxHeatValue));
 
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 				InjectHook(callAddr, space, PATCH_JUMP);
