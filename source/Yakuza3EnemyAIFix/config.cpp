@@ -14,7 +14,7 @@ namespace config {
 	}
 
 	void from_json(const json &j, Config &e) {
-		Config defaults = Config();
+		const Config defaults = Config();
 		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
 		e.ForcePatch = jsonToBool(j.at("ForcePatch"), defaults.ForcePatch);

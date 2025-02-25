@@ -69,7 +69,7 @@ namespace config {
 			configPath = fs::path(asiDir / configPath.filename());
 		}
 
-		Config defaults = Config();
+		const Config defaults = Config();
 		try {
 			Config loaded;
 			if (!fs::exists(configPath)) {

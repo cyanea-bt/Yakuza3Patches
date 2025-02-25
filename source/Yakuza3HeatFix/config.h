@@ -12,6 +12,8 @@ namespace config {
 		bool EnablePatch = true;
 		bool ForcePatch = false;
 		bool UseOldPatch = false;
+		uint8_t DrainTimeMulti = 2; // valid range: 1-255
+		bool DisableHeatDrain = false;
 	};
 
 	void to_json(json &j, const Config &e);
