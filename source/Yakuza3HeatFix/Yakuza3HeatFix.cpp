@@ -26,7 +26,7 @@ namespace HeatFix {
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0;
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
-	static constexpr uint8_t drainTimeMulti = 2;
+	static constexpr uint8_t drainTimeMulti = 4;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
 
 	typedef float(*GetActorFloatType)(void **);
@@ -74,8 +74,9 @@ namespace HeatFix {
 
 	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t curDrainTimer) {
 		uint16_t newDrainTimer;
-		uint8_t oldDrainTimeLimiter;
+		uint8_t oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
 		if (curDrainTimer != lastDrainTimer || curDrainTimer == 0) {
+			// Drain timer got reset somewhere else
 			if (s_Debug) {
 				if (curDrainTimer != 0) {
 					DebugBreak(); // should never happen
@@ -83,7 +84,6 @@ namespace HeatFix {
 				}
 			}
 
-			// drain timer got reset somewhere else
 			substituteTimer = 0;
 			drainTimeLimiter = 1;
 			oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
@@ -93,11 +93,10 @@ namespace HeatFix {
 			newDrainTimer = 1;
 		}
 		else if (curDrainTimer == 1) {
-			// keep "real" drain timer at 1 for (drainTimeMulti + 1) frames,
-			// to make up for immediately increasing it from 0 to 1
+			// Keep drain timer at 1 for (drainTimeMulti * 2 - 1) frames,
+			// to make up for immediately increasing it from 0 to 1 earlier.
 			newDrainTimer = 1;
-			oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
-			if (substituteTimer == drainTimeMulti) {
+			if (substituteTimer == (drainTimeMulti * 2 - 2)) { // -2 because timer starts at 0
 				newDrainTimer++;
 			}
 			else {
@@ -105,7 +104,7 @@ namespace HeatFix {
 			}
 
 			if (s_Debug) {
-				if (substituteTimer > drainTimeMulti || drainTimeLimiter != 1) {
+				if (substituteTimer > (drainTimeMulti * 2 - 2) || drainTimeLimiter != 1) {
 					DebugBreak(); // should never happen
 					utils::Log("");
 				}
@@ -113,15 +112,14 @@ namespace HeatFix {
 		}
 		else {
 			if (s_Debug) {
-				if (substituteTimer != drainTimeMulti) {
+				if (substituteTimer != (drainTimeMulti * 2 - 2) || substituteTimer == 0) {
 					DebugBreak(); // should never happen
 					utils::Log("");
 				}
 			}
 
-			// increase drain timer every (drainTimeMulti) frames
+			// Increase drain timer every (drainTimeMulti) frames
 			newDrainTimer = curDrainTimer;
-			oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
 			if (drainTimeLimiter == drainTimeMulti) {
 				drainTimeLimiter = 1;
 				if (newDrainTimer < MAX_DrainTimer) {
@@ -142,8 +140,8 @@ namespace HeatFix {
 
 		if (s_Debug) {
 			utils::Log(format(
-				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - substituteTimer: {:d} - newDrainTimer: {:d}", 
-				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, drainTimeMulti, oldDrainTimeLimiter, curDrainTimer, substituteTimer, newDrainTimer), 3
+				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
+				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, drainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, substituteTimer), 3
 			);
 		}
 		lastDrainTimer = newDrainTimer;
