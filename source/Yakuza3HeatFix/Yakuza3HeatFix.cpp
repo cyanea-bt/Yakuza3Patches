@@ -46,7 +46,10 @@ namespace LegacyHeatFix {
 	static uintptr_t isCombatFinished = 0;
 
 	static uint32_t isCombatPausedByTutorial = 0;
-	static uint32_t isCombatInTransition = 0; 
+	static uint32_t isCombatInTransition = 0;
+
+	static bool didNotProcessGrabHit = false;
+	static bool didNotProcessRegHit = false;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		// MOV  param_1,qword ptr [DAT_14122cde8]
@@ -72,10 +75,35 @@ namespace LegacyHeatFix {
 		isCombatInTransition = *(uint32_t *)(pIsCombatInTransition + 0x354);
 		isCombatInTransition &= 0x4000000; // Seems to be != 0 during combat intro or when fading to black after the player dies
 
+		// VMOVSS  XMM0,dword ptr [param_1 + 0x1cc4]
+		// VCOMISS XMM0,0.0f
+		// JBE     +0x36
+		const float grabDamage = *(float *)(param1 + 0x1cc4); // I assume that is what this float is
+		const bool successfulGrabHit = grabDamage > 0.0f;
+
+		// CMP  word ptr [param_1 + 0x1abe],0x0
+		// JBE  +0x63
+		const uint16_t unkUint1 = *(uint16_t *)(param1 + 0x1abe);
+		// TEST byte ptr [param_1 + 0x1a9c],0x10
+		// JNZ  +0x5a
+		const uint8_t unkUint2 = *(uint8_t *)(param1 + 0x1a9c);
+		const bool successfulRegularHit = !successfulGrabHit && (unkUint1 > 0 && (unkUint2 & 0x10) == 0);
+
+		// MOVZX EDI,word ptr [param_1 + 0x14c8]
+		const uint16_t heatDrainTimer = *(uint16_t *)(param1 + 0x14c8);
+
 		if (s_Debug) {
 			if (origHeatFunc != verifyHeatFunc || verifyHeatFunc == nullptr) {
 				DebugBreak();
 			}
+
+			if (didNotProcessGrabHit && (!successfulGrabHit || heatDrainTimer > 0x1)) {
+				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
+			}
+			else if (didNotProcessRegHit && (!successfulRegularHit || heatDrainTimer > 0x1)) {
+				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
+			}
+
 			dbg_msg = format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
 				utils::TzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
 			utils::Log(format("PatchedHeatFunc: {:d} - {:s}", dbg_Counter1++, dbg_msg), 1);
@@ -96,6 +124,8 @@ namespace LegacyHeatFix {
 			// Since I don't know how important that code is, we'll call UpdateHeat() immediately instead of waiting for the next frame/update.
 			origHeatFunc(param1, param2, param3, param4);
 			counter++;
+			didNotProcessGrabHit = false;
+			didNotProcessRegHit = false;
 		}
 		else {
 			/*
@@ -112,8 +142,18 @@ namespace LegacyHeatFix {
 			* This seems to work fine and the resulting drain rate is almost identical to the PS3 original.
 			*/
 			if (counter % 2 == 0) {
-				counter = 0;
 				origHeatFunc(param1, param2, param3, param4);
+				counter = 0;
+				didNotProcessGrabHit = false;
+				didNotProcessRegHit = false;
+			}
+			else {
+				if (successfulGrabHit) {
+					didNotProcessGrabHit = true;
+				}
+				else if (successfulRegularHit) {
+					didNotProcessRegHit = true;
+				}
 			}
 			counter++;
 		}
