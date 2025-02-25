@@ -25,7 +25,7 @@ namespace HeatFix {
 	using namespace std;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0;
 	static uint8_t drainTimeLimiter = 1;
-	static uint16_t lastDrainTimer = 0;
+	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 	static constexpr uint8_t drainTimeMulti = 2;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
 
@@ -73,26 +73,77 @@ namespace HeatFix {
 	}
 
 	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t curDrainTimer) {
-		if (curDrainTimer != lastDrainTimer) {
-			drainTimeLimiter = 1; // drain timer got reset by another function
-		}
+		uint16_t newDrainTimer;
+		uint8_t oldDrainTimeLimiter;
+		if (curDrainTimer != lastDrainTimer || curDrainTimer == 0) {
+			if (s_Debug) {
+				if (curDrainTimer != 0) {
+					DebugBreak(); // should never happen
+					utils::Log("");
+				}
+			}
 
-		uint16_t newDrainTimer = curDrainTimer;
-		const uint8_t oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
-		if (drainTimeLimiter == drainTimeMulti) {
+			// drain timer got reset somewhere else
+			substituteTimer = 0;
 			drainTimeLimiter = 1;
-			if (newDrainTimer < MAX_DrainTimer) {
+			oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
+			// Immediately increase to 1, so we'll be able to notice if the timer gets reset.
+			// Otherwise we wouldn't be able to tell whether we kept the timer at 0 intentionally
+			// or if it was reset to 0 externally. (Could lead to starting Heat drain too early)
+			newDrainTimer = 1;
+		}
+		else if (curDrainTimer == 1) {
+			// keep "real" drain timer at 1 for (drainTimeMulti + 1) frames,
+			// to make up for immediately increasing it from 0 to 1
+			newDrainTimer = 1;
+			oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
+			if (substituteTimer == drainTimeMulti) {
 				newDrainTimer++;
+			}
+			else {
+				substituteTimer++;
+			}
+
+			if (s_Debug) {
+				if (substituteTimer > drainTimeMulti || drainTimeLimiter != 1) {
+					DebugBreak(); // should never happen
+					utils::Log("");
+				}
 			}
 		}
 		else {
-			drainTimeLimiter++;
+			if (s_Debug) {
+				if (substituteTimer != drainTimeMulti) {
+					DebugBreak(); // should never happen
+					utils::Log("");
+				}
+			}
+
+			// increase drain timer every (drainTimeMulti) frames
+			newDrainTimer = curDrainTimer;
+			oldDrainTimeLimiter = drainTimeLimiter; // for logging purposes
+			if (drainTimeLimiter == drainTimeMulti) {
+				drainTimeLimiter = 1;
+				if (newDrainTimer < MAX_DrainTimer) {
+					newDrainTimer++;
+				}
+			}
+			else {
+				drainTimeLimiter++;
+			}
+
+			if (s_Debug) {
+				if (drainTimeLimiter > drainTimeMulti || newDrainTimer > MAX_DrainTimer) {
+					DebugBreak(); // should never happen
+					utils::Log("");
+				}
+			}
 		}
 
 		if (s_Debug) {
 			utils::Log(format(
-				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d}", 
-				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, drainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer), 3
+				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - substituteTimer: {:d} - newDrainTimer: {:d}", 
+				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, drainTimeMulti, oldDrainTimeLimiter, curDrainTimer, substituteTimer, newDrainTimer), 3
 			);
 		}
 		lastDrainTimer = newDrainTimer;
