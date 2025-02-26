@@ -23,7 +23,7 @@ static config::Config s_Config;
 
 namespace HeatFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
@@ -158,11 +158,26 @@ namespace HeatFix {
 		return newDrainTimer;
 	}
 
-	static float GetNewHeatValue(void *param1, float heatVal, float unkXMM2, float unkXMM3) {
-		(void)param1;
-		(void)unkXMM2;
-		(void)unkXMM3;
-		return heatVal; // not implemented yet
+	static float GetNewHeatValue(void **playerActor, float heatVal, float unkXMM2, float unkXMM3) {
+		if (s_Debug) {
+			if (unkXMM2 != 0.0f) {
+				DebugBreak();
+				utils::Log(""); // XMM2 is always 0.0f
+			}
+			if (unkXMM3 != heatVal && unkXMM3 >= 0.0f) {
+				DebugBreak();
+				utils::Log(""); // XMM3 is == heatVal while heatVal >= 0
+			}
+			// Essentially - XMM2/XMM3 were used to make sure that the new Heat value is above 0.0f
+			// So I won't have to worry about checking against 0.0f
+
+			utils::Log(format(
+				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - unkXMM2: {:f} - unkXMM3: {:f}",
+				"GetNewHeatValue", dbg_Counter4++, utils::TzString_ms(), (void *)playerActor, GetCurrentHeatValue(playerActor), heatVal, unkXMM2, unkXMM3), 4
+			);
+		}
+		//return GetCurrentHeatValue(playerActor); // Heat won't change with regular hits
+		return heatVal;
 	}
 }
 
@@ -193,6 +208,7 @@ void OnInitializeHook()
 				utils::Log("", 1);
 				utils::Log("", 2);
 				utils::Log("", 3);
+				utils::Log("", 4);
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -290,14 +306,20 @@ void OnInitializeHook()
 				Nop(callAddr, 6);
 
 				const uint8_t payload[] = {
-					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetCurrentHeatValue
+					0x0f, 0x57, 0xc9, // xorps xmm1, xmm1 (zero-out xmm1, for testing/debugging purposes)
+					0x0f, 0x28, 0xce, // movaps xmm1, xmm6 (copy calculated Heat value to param2)
+					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetNewHeatValue
 					0xff, 0xd0, // call rax
+					0x0f, 0x28, 0xf0, // movaps xmm6, xmm0 (copy returned/new Heat value to XMM6)
 					0x48, 0x89, 0xd9, // mov rcx, rbx (copy address of playerActor to param1)
 					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetMaxHeatValue
 					0xff, 0xd0, // call rax
 					0xe9, 0x00, 0x00, 0x00, 0x00 // jmp retAddr
 				};
 				/*
+				* The game expects the player's maximum Heat value to be inside XMM0 and the new/calculated Heat
+				* value inside XMM6 after we return to HeatUpdate()!
+				* 
 				* Shortly after we return to the game's own code, the contents of (E)DI will be written to memory
 				* as the new value for HeatUpdate()'s drain timer. This is the write instruction:
 				* MOV word ptr [RBX + 0x14c8],DI
@@ -306,12 +328,13 @@ void OnInitializeHook()
 				std::byte *space = trampoline->RawSpace(sizeof(payload));
 				memcpy(space, payload, sizeof(payload));
 
-				auto pGetCurrentHeatValue = utils::GetFuncAddr(GetCurrentHeatValue);
-				memcpy(space + 2, &pGetCurrentHeatValue, sizeof(pGetCurrentHeatValue));
+				auto pGetNewHeatValue = utils::GetFuncAddr(GetNewHeatValue);
+				// 3 + 3 + 2 = 8
+				memcpy(space + 8, &pGetNewHeatValue, sizeof(pGetNewHeatValue));
 
 				auto pGetMaxHeatValue = utils::GetFuncAddr(GetMaxHeatValue);
-				// 10 + 2 + 3 + 2 = 17
-				memcpy(space + 17, &pGetMaxHeatValue, sizeof(pGetMaxHeatValue));
+				// 5 + 2 + 8 = 15
+				memcpy(space + sizeof(payload) - 15, &pGetMaxHeatValue, sizeof(pGetMaxHeatValue));
 
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 				InjectHook(callAddr, space, PATCH_JUMP);
