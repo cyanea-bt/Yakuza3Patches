@@ -2,6 +2,7 @@
 #include <iostream>
 #include "config.h"
 #include "config_common.h"
+#include "utils.h"
 #include "win_utils.h"
 
 
@@ -14,6 +15,21 @@ namespace config {
 		bool retVal;
 		if (element.is_boolean()) {
 			element.get_to(retVal);
+		}
+		else if (element.is_string()) {
+			string temp;
+			element.get_to(temp);
+			temp = utils::trim(temp);
+			temp = utils::lowercase(temp);
+			if (temp == "true" || temp == "yes") {
+				retVal = true;
+			}
+			else if (temp == "false" || temp == "no") {
+				retVal = false;
+			}
+			else {
+				retVal = defaultVal;
+			}
 		}
 		else {
 			retVal = defaultVal;
