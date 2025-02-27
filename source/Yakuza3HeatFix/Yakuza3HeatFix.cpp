@@ -228,10 +228,17 @@ void OnInitializeHook()
 
 			/*
 			* 66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd
+			* 
+			* This is the section responsible for incrementing the Heat drain timer every time it gets reached.
+			* There are a few more rules to it, but in general this is executed on every frame where all of these are true:
+			* - Combat is ongoing (i.e. NOT paused by combat intro/outro or Heat moves)
+			* - The player is alive and player's health is above 19%
+			* - The player did NOT hit the enemy
+			* - The player was NOT hit the enemy
 			*/
 			auto increaseDrainTimer = pattern("66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd");
 			if (increaseDrainTimer.count_hint(1).size() == 1) {
-				utils::Log("Found pattern: IncreaseDrainTimer");
+				utils::Log("Found pattern: HeatDrainTimer");
 				const auto match = increaseDrainTimer.get_one();
 				const void *patchAddr = match.get<void>(0);
 				const void *retAddr = match.get<void>(14);
@@ -248,7 +255,7 @@ void OnInitializeHook()
 				/*
 				* - back up volatile registers
 				* - make sure not to mess up the stack/backed up registers
-				* - call function that returns new timer value
+				* - call our function that returns the new timer value
 				* - restore registers/stack
 				* - copy new timer value to EDI/EBP
 				* - return to next instruction in UpdateHeat()
@@ -308,14 +315,14 @@ void OnInitializeHook()
 			if (addRescueCard.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: RescueCard");
 				const auto match = addRescueCard.get_one();
-				const void *mulAddr = match.get<void>(0);
+				const void *addAddr = match.get<void>(0);
 				const void *retAddr = match.get<void>(8);
-				Trampoline *trampoline = Trampoline::MakeTrampoline(mulAddr);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(addAddr);
 				// Nop this instruction after reading its offset value:
 				// 0xc5, 0x32, 0x58, 0x0d, 0x57, 0x49, 0x81, 0x00 (vaddss xmm9,xmm9,DWORD PTR [rip+0x814957])
 				float *pBoostValue;
 				ReadOffsetValue(match.get<void>(4), pBoostValue); // read offset to original boostValue
-				Nop(mulAddr, 8);
+				Nop(addAddr, 8);
 
 				// XMM8 will always be 0.0f here, so we can use it as temporary storage and reset it to 0.0f after.
 				// There are probably better ways of dividing the original boost value by 2 before adding it to XMM9.
@@ -337,23 +344,21 @@ void OnInitializeHook()
 				WriteOffsetValue(space + 4 + 9 + 5, space); // write offset to copied floatMulti
 
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
-				InjectHook(mulAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
+				InjectHook(addAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
 			}
 			if (addPhoenixSpirit.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: PhoenixSpirit");
 				const auto match = addPhoenixSpirit.get_one();
-				const void *mulAddr = match.get<void>(0);
+				const void *addAddr = match.get<void>(0);
 				const void *retAddr = match.get<void>(8);
-				Trampoline *trampoline = Trampoline::MakeTrampoline(mulAddr);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(addAddr);
 				// Nop this instruction after reading its offset value:
 				// 0xc5, 0x32, 0x58, 0x0d, 0x4d, 0x3c, 0x81, 0x00 (vaddss xmm9,xmm9,DWORD PTR [rip+0x813c4d])
 				float *pBoostValue;
 				ReadOffsetValue(match.get<void>(4), pBoostValue); // read offset to original boostValue
-				Nop(mulAddr, 8);
+				Nop(addAddr, 8);
 
 				// XMM8 will always be 0.0f here, so we can use it as temporary storage and reset it to 0.0f after.
-				// There are probably better ways of dividing the original boost value by 2 before adding it to XMM9.
-				// But this method seems to work just fine.
 				const uint8_t payload[] = {
 					0x00, 0x00, 0x00, 0x00, // floatMulti
 					0xf3, 0x44, 0x0f, 0x58, 0x05, 0x00, 0x00, 0x00, 0x00, // addss xmm8, dword ptr [pBoostValue]
@@ -371,7 +376,42 @@ void OnInitializeHook()
 				WriteOffsetValue(space + 4 + 9 + 5, space); // write offset to copied floatMulti
 
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
-				InjectHook(mulAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
+				InjectHook(addAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
+			}
+
+			/*
+			* 75 0d c4 c1 78 28 f8 0f b7 fe c4 41 32 58 cb - Heat boost by "True Lotus Flare Fist"
+			* 
+			* Keeps on charging Heat while the player charges up the "Lotus Flare Fist" attack.
+			* Same issue as the the 2 above - charging rate in Y3R is twice of the intended/PS3 rate.
+			*/
+			auto addLotusFlare = pattern("75 0d c4 c1 78 28 f8 0f b7 fe c4 41 32 58 cb");
+			if (addLotusFlare.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: TrueLotusFlareFist");
+				const auto match = addLotusFlare.get_one();
+				const void *addAddr = match.get<void>(10);
+				const void *retAddr = match.get<void>(15);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(addAddr);
+				// Nop this instruction:
+				// 0xc4, 0x41, 0x32, 0x58, 0xcb (vaddss xmm9,xmm9,xmm11)
+				Nop(addAddr, 5);
+
+				// XMM11 will contain the original boost value.
+				const uint8_t payload[] = {
+					0x00, 0x00, 0x00, 0x00, // floatMulti
+					0xf3, 0x44, 0x0f, 0x59, 0x1d, 0x00, 0x00, 0x00, 0x00, // mulss xmm11, dword ptr [floatMulti]
+					0xf3, 0x45, 0x0f, 0x58, 0xcb, // addss xmm9, xmm11 (add lowered boostValue to XMM9)
+					0xe9, 0x00, 0x00, 0x00, 0x00, // jmp retAddr
+				};
+
+				std::byte *space = trampoline->RawSpace(sizeof(payload));
+				memcpy(space, payload, sizeof(payload));
+
+				memcpy(space, &floatMulti, sizeof(floatMulti)); // copy floatMulti to first 4 bytes of payload
+				WriteOffsetValue(space + 4 + 5, space); // write offset to copied floatMulti
+
+				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+				InjectHook(addAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
 			}
 
 			/*
