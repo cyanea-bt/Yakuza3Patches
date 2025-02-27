@@ -23,11 +23,12 @@ static config::Config s_Config;
 
 namespace HeatFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0, dbg_Counter5 = 0;
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
 
+	typedef bool(*GetActorBoolType)(void **);
 	typedef float(*GetActorFloatType)(void **);
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
 	static constexpr float floatMulti = 0.5f; // for float values that have to be halved when running at 60 fps
@@ -80,6 +81,13 @@ namespace HeatFix {
 		if (s_Debug) {
 			oldDrainTimeLimiter = drainTimeLimiter;
 			oldSubstituteTimer = substituteTimer;
+
+			// movzx eax,word ptr [param_1 + 0x1abc]
+			const uint16_t incomingDamage = *(uint16_t *)((uintptr_t)playerActor + 0x1abc);
+			if (incomingDamage > 0) {
+				DebugBreak(); // Drain timer shouldn't change on a frame with incoming damage.
+				utils::Log("");
+			}
 		}
 
 		if (s_Config.DisableHeatDrain) {
@@ -159,26 +167,128 @@ namespace HeatFix {
 		return newDrainTimer;
 	}
 
-	static float GetNewHeatValue(void **playerActor, float heatVal, float unkXMM2, float unkXMM3) {
+	static float GetNewHeatValue(void **playerActor, const float newHeatVal, const float baseDrainRate, const uint16_t newDrainTimer) {
+		const float oldHeatVal = GetCurrentHeatValue(playerActor);
+		const float heatDiff = std::fabs(oldHeatVal - newHeatVal);
+
+		// movzx eax,word ptr [param_1 + 0x1abc]
+		const uint16_t incomingDamage = *(uint16_t *)((uintptr_t)playerActor + 0x1abc);
+
+		// MOV RAX,qword ptr [param_1]
+		// CALL qword ptr [RAX + 0x290]
+		uintptr_t *vfTable = (uintptr_t *)*playerActor;
+		GetActorBoolType IsPlayerDrunk = (GetActorBoolType)vfTable[0x290 / sizeof(uintptr_t)];
+		const bool isDrunk = IsPlayerDrunk(playerActor);
+
+		// MOV RBX,dword ptr [param_1 + 0x1a3c]
+		const uint32_t playerStatus = *(uint32_t *)((uintptr_t)playerActor + 0x1a3c);
+		switch (playerStatus) {
+		case 0:
+			utils::Log(""); break; // default value?
+		case 1:
+			utils::Log(""); break; // player locks on to the enemy?
+		case 2:
+			utils::Log(""); break; // player uses LH, HH, Grab (but misses the grab?)
+		case 3:
+			utils::Log(""); break; // player gets hit by the enemy
+		case 4:
+			utils::Log(""); break; // player gets knocked down by the enemy?
+		case 5:
+			utils::Log(""); break; // player uses dodge
+		case 6:
+			utils::Log(""); break; // player is lying on the ground?
+		case 7:
+			utils::Log(""); break; // player uses block
+		case 8:
+			utils::Log(""); break; // player picks up an object/weapon?
+		case 9:
+			utils::Log(""); break; // player grabs the enemy
+		case 10:
+			utils::Log(""); break; // enemy grabs the player
+		case 11:
+			utils::Log(""); break; // player uses HH on grabbed enemy?
+		case 12:
+			utils::Log(""); break; // enemy escapes the player's grab?
+		case 15:
+			utils::Log(""); break; // player starts Heat move?
+		case 16:
+			utils::Log(""); break; // enemy throws the player
+		case 17:
+			utils::Log(""); break; // player tries to throw the enemy, player uses LH on grabbed enemy
+		case 19:
+			utils::Log(""); break; // player uses taunt
+		default:
+			utils::Log(""); break;
+		}
+
 		if (s_Debug) {
+			/*
 			if (unkXMM2 != 0.0f) {
 				DebugBreak();
-				utils::Log(""); // XMM2 is always 0.0f
+				utils::Log(""); // XMM2 seems to always be 0.0f
 			}
-			if (unkXMM3 != heatVal && unkXMM3 >= 0.0f) {
+			*/
+
+			// CMP  byte ptr [RBX + 0x1a49],0x3
+			// JNZ +0x0e
+			// CMP  byte ptr [RBX + 0x1a48],0x3c
+			// JA  +0x05
+			const uint8_t unkUInt1 = *(uint8_t *)((uintptr_t)playerActor + 0x1a49);
+			if (unkUInt1 == 0) { // default value?
+				utils::Log("");
+			}
+			else if (unkUInt1 == 1) { // while player is standing up?
+				utils::Log("");
+			}
+			else if (unkUInt1 == 2) { // while player is getting knocked down/falling to the ground
+				utils::Log("");
+			}
+			else if (unkUInt1 == 3) { // while player is lying on the ground?
+				utils::Log("");
+			}
+			else if (unkUInt1 != 0 && unkUInt1 != 2 && unkUInt1 != 3) {
 				DebugBreak();
-				utils::Log(""); // XMM3 is == heatVal while heatVal >= 0
+				utils::Log("");
 			}
-			// Essentially - XMM2/XMM3 were used to make sure that the new Heat value is above 0.0f
-			// So I won't have to worry about checking against 0.0f
+			const uint8_t unkUInt2 = *(uint8_t *)((uintptr_t)playerActor + 0x1a48);
+			if (unkUInt2 > 0x3c) {
+				DebugBreak(); // never happens?
+				utils::Log("");
+			}
+			const bool playerGotKnockedDown = (playerStatus == 4) && (unkUInt1 == 0x3) && (unkUInt2 <= 0x3c);
+			if (playerStatus == 4) {
+				utils::Log(format(
+					"{:s} - {:d} - TzNow: {:s} - heatDiff: {:f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
+					"GetNewHeatValue", dbg_Counter5++, utils::TzString_ms(), heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 5
+				);
+			}
+
+			const bool playerIsHoldingEnemy = playerStatus == 9;
+			const bool enemyIsHoldingPlayer = playerStatus == 10;
+
+			float expectedDiff = baseDrainRate;
+			if (isDrunk) {
+				expectedDiff *= 0.5f;
+			}
+			if (playerIsHoldingEnemy) {
+				expectedDiff *= 0.5f;
+			}
+			else if (playerGotKnockedDown || enemyIsHoldingPlayer) {
+				expectedDiff *= 10.0f;
+			}
+
+			if (incomingDamage == 0 && newHeatVal <= oldHeatVal && heatDiff != expectedDiff) {
+				DebugBreak();
+ 				utils::Log("");
+			}
 
 			utils::Log(format(
-				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - unkXMM2: {:f} - unkXMM3: {:f}",
-				"GetNewHeatValue", dbg_Counter4++, utils::TzString_ms(), (void *)playerActor, GetCurrentHeatValue(playerActor), heatVal, unkXMM2, unkXMM3), 4
+				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - heatDiff: {:f} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
+				"GetNewHeatValue", dbg_Counter4++, utils::TzString_ms(), (void *)playerActor, oldHeatVal, newHeatVal, heatDiff, incomingDamage, baseDrainRate, newDrainTimer), 4
 			);
 		}
 		//return GetCurrentHeatValue(playerActor); // Heat won't change with regular hits
-		return heatVal;
+		return newHeatVal;
 	}
 }
 
@@ -210,6 +320,7 @@ void OnInitializeHook()
 				utils::Log("", 2);
 				utils::Log("", 3);
 				utils::Log("", 4);
+				utils::Log("", 5);
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -429,6 +540,8 @@ void OnInitializeHook()
 				const uint8_t payload[] = {
 					0x0f, 0x57, 0xc9, // xorps xmm1, xmm1 (zero-out xmm1, for testing/debugging purposes)
 					0x0f, 0x28, 0xce, // movaps xmm1, xmm6 (copy calculated Heat value to param2)
+					0x0f, 0x28, 0xd7, // movaps xmm2, xmm7 (copy baseDrainRate to param3)
+					0x41, 0x89, 0xf9, // mov r9d, edi (copy new Heat drain timer to param4)
 					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetNewHeatValue
 					0xff, 0xd0, // call rax
 					0x0f, 0x28, 0xf0, // movaps xmm6, xmm0 (copy returned/new Heat value to XMM6)
@@ -450,8 +563,8 @@ void OnInitializeHook()
 				memcpy(space, payload, sizeof(payload));
 
 				auto pGetNewHeatValue = utils::GetFuncAddr(GetNewHeatValue);
-				// 3 + 3 + 2 = 8
-				memcpy(space + 8, &pGetNewHeatValue, sizeof(pGetNewHeatValue));
+				// 3 + 3 + 3 + 3 + 2 = 14
+				memcpy(space + 14, &pGetNewHeatValue, sizeof(pGetNewHeatValue));
 
 				auto pGetMaxHeatValue = utils::GetFuncAddr(GetMaxHeatValue);
 				// 5 + 2 + 8 = 15
