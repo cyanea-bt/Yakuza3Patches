@@ -30,6 +30,7 @@ namespace HeatFix {
 
 	typedef float(*GetActorFloatType)(void **);
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
+	static constexpr float floatMulti = 0.5f; // for float values that have to be halved when running at 60 fps
 
 	static float GetCurrentHeatValue(void **playerActor) {
 		// MOV RAX,qword ptr [param_1]
@@ -213,14 +214,14 @@ void OnInitializeHook()
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
 				if (getCurHeatPattern.count_hint(1).size() == 1) {
-					auto match = getCurHeatPattern.get_one();
+					const auto match = getCurHeatPattern.get_one();
 					verifyGetCurHeat = (GetActorFloatType)match.get<void>();
 				}
 
 				// GetMaxHeatValue - verify we're calling the correct function
 				auto getMaxHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 0c c3");
 				if (getMaxHeatPattern.count_hint(1).size() == 1) {
-					auto match = getMaxHeatPattern.get_one();
+					const auto match = getMaxHeatPattern.get_one();
 					verifyGetMaxHeat = (GetActorFloatType)match.get<void>();
 				}
 			}
@@ -231,9 +232,9 @@ void OnInitializeHook()
 			auto increaseDrainTimer = pattern("66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd");
 			if (increaseDrainTimer.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: IncreaseDrainTimer");
-				auto match = increaseDrainTimer.get_one();
-				void *patchAddr = match.get<void>(0);
-				void *retAddr = match.get<void>(14);
+				const auto match = increaseDrainTimer.get_one();
+				const void *patchAddr = match.get<void>(0);
+				const void *retAddr = match.get<void>(14);
 				Trampoline *trampoline = Trampoline::MakeTrampoline(patchAddr);
 				/*
 				* Nop these instructions:
@@ -285,12 +286,92 @@ void OnInitializeHook()
 				std::byte *space = trampoline->RawSpace(sizeof(payload));
 				memcpy(space, payload, sizeof(payload));
 
-				auto funcAddr = utils::GetFuncAddr(GetNewHeatDrainTimer);
+				const auto funcAddr = utils::GetFuncAddr(GetNewHeatDrainTimer);
 				// 1 + 1 + 3 + 1 + 2 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 30
 				memcpy(space + 30, &funcAddr, sizeof(funcAddr));
 
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 				InjectHook(patchAddr, space, PATCH_JUMP);
+			}
+
+			/*
+			* c5 32 58 0d 57 49 81 00 e9 - Heat boost by "Rescue Card"
+			* c5 32 58 0d 4d 3c 81 00 e9 - Heat boost by "Phoenix Spirit"
+			* 
+			* Both of these automatically increase Heat while the player's health is at/below 19%.
+			* Both have the same issue - they add a fixed amount of Heat every frame. So in Y3R
+			* (which ALWAYS runs Heat calculations 60 times per second) they increase Heat at twice
+			* their intended rate. Confirmed by comparison with PS3 version.
+			*/
+			auto addRescueCard = pattern("c5 32 58 0d 57 49 81 00 e9");
+			auto addPhoenixSpirit = pattern("c5 32 58 0d 4d 3c 81 00 e9");
+			if (addRescueCard.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: RescueCard");
+				const auto match = addRescueCard.get_one();
+				const void *mulAddr = match.get<void>(0);
+				const void *retAddr = match.get<void>(8);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(mulAddr);
+				// Nop this instruction after reading its offset value:
+				// 0xc5, 0x32, 0x58, 0x0d, 0x57, 0x49, 0x81, 0x00 (vaddss xmm9,xmm9,DWORD PTR [rip+0x814957])
+				float *pBoostValue;
+				ReadOffsetValue(match.get<void>(4), pBoostValue); // read offset to original boostValue
+				Nop(mulAddr, 8);
+
+				// XMM8 will always be 0.0f here, so we can use it as temporary storage and reset it to 0.0f after.
+				// There are probably better ways of dividing the original boost value by 2 before adding it to XMM9.
+				// But this method seems to work just fine.
+				const uint8_t payload[] = {
+					0x00, 0x00, 0x00, 0x00, // floatMulti
+					0xf3, 0x44, 0x0f, 0x58, 0x05, 0x00, 0x00, 0x00, 0x00, // addss xmm8, dword ptr [pBoostValue]
+					0xf3, 0x44, 0x0f, 0x59, 0x05, 0x00, 0x00, 0x00, 0x00, // mulss xmm8, dword ptr [floatMulti]
+					0xf3, 0x45, 0x0f, 0x58, 0xc8, // addss xmm9, xmm8 (add lowered boostValue to XMM9)
+					0x45, 0x0f, 0x57, 0xc0, // xorps xmm8,xmm8 (zero-out xmm8)
+					0xe9, 0x00, 0x00, 0x00, 0x00, // jmp retAddr
+				};
+
+				std::byte *space = trampoline->RawSpace(sizeof(payload));
+				memcpy(space, payload, sizeof(payload));
+
+				memcpy(space, &floatMulti, sizeof(floatMulti)); // copy floatMulti to first 4 bytes of payload
+				WriteOffsetValue(space + 4 + 5, pBoostValue); // write offset to original boost value
+				WriteOffsetValue(space + 4 + 9 + 5, space); // write offset to copied floatMulti
+
+				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+				InjectHook(mulAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
+			}
+			if (addPhoenixSpirit.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: PhoenixSpirit");
+				const auto match = addPhoenixSpirit.get_one();
+				const void *mulAddr = match.get<void>(0);
+				const void *retAddr = match.get<void>(8);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(mulAddr);
+				// Nop this instruction after reading its offset value:
+				// 0xc5, 0x32, 0x58, 0x0d, 0x4d, 0x3c, 0x81, 0x00 (vaddss xmm9,xmm9,DWORD PTR [rip+0x813c4d])
+				float *pBoostValue;
+				ReadOffsetValue(match.get<void>(4), pBoostValue); // read offset to original boostValue
+				Nop(mulAddr, 8);
+
+				// XMM8 will always be 0.0f here, so we can use it as temporary storage and reset it to 0.0f after.
+				// There are probably better ways of dividing the original boost value by 2 before adding it to XMM9.
+				// But this method seems to work just fine.
+				const uint8_t payload[] = {
+					0x00, 0x00, 0x00, 0x00, // floatMulti
+					0xf3, 0x44, 0x0f, 0x58, 0x05, 0x00, 0x00, 0x00, 0x00, // addss xmm8, dword ptr [pBoostValue]
+					0xf3, 0x44, 0x0f, 0x59, 0x05, 0x00, 0x00, 0x00, 0x00, // mulss xmm8, dword ptr [floatMulti]
+					0xf3, 0x45, 0x0f, 0x58, 0xc8, // addss xmm9, xmm8 (add lowered boostValue to XMM9)
+					0x45, 0x0f, 0x57, 0xc0, // xorps xmm8,xmm8 (zero-out xmm8)
+					0xe9, 0x00, 0x00, 0x00, 0x00, // jmp retAddr
+				};
+
+				std::byte *space = trampoline->RawSpace(sizeof(payload));
+				memcpy(space, payload, sizeof(payload));
+
+				memcpy(space, &floatMulti, sizeof(floatMulti)); // copy floatMulti to first 4 bytes of payload
+				WriteOffsetValue(space + 4 + 5, pBoostValue); // write offset to original boost value
+				WriteOffsetValue(space + 4 + 9 + 5, space); // write offset to copied floatMulti
+
+				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+				InjectHook(mulAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
 			}
 
 			/*
