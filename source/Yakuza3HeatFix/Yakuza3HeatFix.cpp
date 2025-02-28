@@ -73,6 +73,27 @@ namespace HeatFix {
 		return maxHeat;
 	}
 
+	static bool IsPlayerDrunk(void **playerActor) {
+		// MOV RAX,qword ptr [param_1]
+		// CALL qword ptr [RAX + 0x290]
+		uintptr_t *vfTable = (uintptr_t *)*playerActor;
+		GetActorBoolType IsDrunk = (GetActorBoolType)vfTable[0x290 / sizeof(uintptr_t)];
+		return IsDrunk(playerActor);
+	}
+
+	static bool PatchedIsPlayerDrunk(void **playerActor, const float newHeatVal, const uint16_t newDrainTimer) {
+		if (s_Debug) {
+			(void)newDrainTimer;
+			const float oldHeatVal = GetCurrentHeatValue(playerActor);
+			if (newHeatVal != oldHeatVal) {
+				DebugBreak(); // AFAIK - Heat value should be unchanged at this point, unless player and enemy hit each other on the same frame
+				utils::Log("");
+			}
+		}
+
+		return IsPlayerDrunk(playerActor);
+	}
+
 	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t curDrainTimer) {
 		uint16_t newDrainTimer;
 		const uint16_t MAX_SubstituteTimer = (s_Config.DrainTimeMulti * 2 - 2); // -2 because timer starts at 0
@@ -173,11 +194,6 @@ namespace HeatFix {
 
 		// movzx eax,word ptr [param_1 + 0x1abc]
 		const uint16_t incomingDamage = *(uint16_t *)((uintptr_t)playerActor + 0x1abc);
-
-		// MOV RAX,qword ptr [param_1]
-		// CALL qword ptr [RAX + 0x290]
-		uintptr_t *vfTable = (uintptr_t *)*playerActor;
-		GetActorBoolType IsPlayerDrunk = (GetActorBoolType)vfTable[0x290 / sizeof(uintptr_t)];
 		const bool isDrunk = IsPlayerDrunk(playerActor);
 
 		// MOV RBX,dword ptr [param_1 + 0x1a3c]
@@ -246,7 +262,10 @@ namespace HeatFix {
 			else if (unkUInt1 == 3) { // while player is lying on the ground?
 				utils::Log("");
 			}
-			else if (unkUInt1 != 0 && unkUInt1 != 2 && unkUInt1 != 3) {
+			else if (unkUInt1 == 4) { // while player is locked on to the enemy?
+				utils::Log("");
+			}
+			else if (unkUInt1 > 4) {
 				DebugBreak();
 				utils::Log("");
 			}
@@ -334,6 +353,51 @@ void OnInitializeHook()
 				if (getMaxHeatPattern.count_hint(1).size() == 1) {
 					const auto match = getMaxHeatPattern.get_one();
 					verifyGetMaxHeat = (GetActorFloatType)match.get<void>();
+				}
+
+				// Call to IsPlayerDrunk() in the block that's executed if (incoming damage > 0)
+				// Just using this to check whether the Heat value changed before this point or not
+				auto callIsPlayerDrunk = pattern("ff 90 90 02 00 00 85 c0 74 05 c4 c1 4a 59 f2 c4 c1");
+				if (callIsPlayerDrunk.count_hint(1).size() == 1) {
+					const auto match = callIsPlayerDrunk.get_one();
+					const void *callAddr = match.get<void>();
+					const void *retAddr = match.get<void>(6);
+					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					Nop(callAddr, 6);
+
+					// RSP is already properly aligned at this point since we replace a call with another call
+					// RCX contains the address of the player actor
+					const uint8_t payload[] = {
+						0x48, 0x81, 0xec, 0x80, 0x00, 0x00, 0x00, // sub rsp, 0x80 (0x20 shadow space for callee + 0x60 for XMM register backups)
+						0x0f, 0x29, 0x44, 0x24, 0x20, //  movaps XMMWORD PTR[rsp + 0x20],xmm0
+						0x0f, 0x29, 0x4c, 0x24, 0x30, //  movaps XMMWORD PTR[rsp + 0x30],xmm1
+						0x0f, 0x29, 0x54, 0x24, 0x40, //  movaps XMMWORD PTR[rsp + 0x40],xmm2
+						0x0f, 0x29, 0x5c, 0x24, 0x50, //  movaps XMMWORD PTR[rsp + 0x50],xmm3
+						0x0f, 0x29, 0x64, 0x24, 0x60, //  movaps XMMWORD PTR[rsp + 0x60],xmm4
+						0x0f, 0x29, 0x6c, 0x24, 0x70, //  movaps XMMWORD PTR[rsp + 0x70],xmm5
+						0x41, 0x0f, 0x28, 0xc9, // movaps xmm1, xmm9 (copy new Heat value to param2)
+						0x41, 0x89, 0xf8, // mov r8d, edi (copy new Heat drain timer to param3)
+						0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, PatchedIsPlayerDrunk
+						0xff, 0xd0, // call rax
+						0x0f, 0x28, 0x44, 0x24, 0x20, // movaps xmm0,XMMWORD PTR[rsp + 0x20]
+						0x0f, 0x28, 0x4c, 0x24, 0x30, // movaps xmm1,XMMWORD PTR[rsp + 0x30]
+						0x0f, 0x28, 0x54, 0x24, 0x40, // movaps xmm2,XMMWORD PTR[rsp + 0x40]
+						0x0f, 0x28, 0x5c, 0x24, 0x50, // movaps xmm3,XMMWORD PTR[rsp + 0x50]
+						0x0f, 0x28, 0x64, 0x24, 0x60, // movaps xmm4,XMMWORD PTR[rsp + 0x60]
+						0x0f, 0x28, 0x6c, 0x24, 0x70, // movaps xmm5,XMMWORD PTR[rsp + 0x70]
+						0x48, 0x81, 0xc4, 0x80, 0x00, 0x00, 0x00, // add rsp, 0x80 (restore rsp)
+						0xe9, 0x00, 0x00, 0x00, 0x00, // jmp retAddr
+					};
+
+					std::byte *space = trampoline->RawSpace(sizeof(payload));
+					memcpy(space, payload, sizeof(payload));
+
+					const auto funcAddr = utils::GetFuncAddr(PatchedIsPlayerDrunk);
+					// 7 + 5 + 5 + 5 + 5 + 5 + 5 + 4 + 3 + 2 = 46
+					memcpy(space + 46, &funcAddr, sizeof(funcAddr));
+
+					WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
+					InjectHook(callAddr, space, PATCH_JUMP);
 				}
 			}
 
