@@ -23,7 +23,7 @@ static config::Config s_Config;
 
 namespace HeatFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0, dbg_Counter5 = 0;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0, dbg_Counter5 = 0, dbg_Counter6 = 0;
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
@@ -83,12 +83,19 @@ namespace HeatFix {
 
 	static bool PatchedIsPlayerDrunk(void **playerActor, const float newHeatVal, const uint16_t newDrainTimer) {
 		if (s_Debug) {
-			(void)newDrainTimer;
+			// movzx eax,word ptr [param_1 + 0x1abc]
+			const uint16_t incomingDamage = *(uint16_t *)((uintptr_t)playerActor + 0x1abc);
+
 			const float oldHeatVal = GetCurrentHeatValue(playerActor);
 			if (newHeatVal != oldHeatVal) {
 				DebugBreak(); // AFAIK - Heat value should be unchanged at this point, unless player and enemy hit each other on the same frame
 				utils::Log("");
 			}
+
+			utils::Log(format(
+				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - newDrainTimer: {:d} - incomingDamage: {:d}",
+				"GetNewHeatDrainTimer", dbg_Counter6++, utils::TzString_ms(), (void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
+			);
 		}
 
 		return IsPlayerDrunk(playerActor);
@@ -340,6 +347,7 @@ void OnInitializeHook()
 				utils::Log("", 3);
 				utils::Log("", 4);
 				utils::Log("", 5);
+				utils::Log("", 6);
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");

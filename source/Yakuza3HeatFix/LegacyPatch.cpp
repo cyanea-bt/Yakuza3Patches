@@ -51,6 +51,7 @@ namespace LegacyHeatFix {
 
 	static bool didNotProcessGrabHit = false;
 	static bool didNotProcessRegHit = false;
+	static bool didNotProcessEnemyHit = false;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		// MOV  param_1,qword ptr [DAT_14122cde8]
@@ -93,6 +94,9 @@ namespace LegacyHeatFix {
 		// MOVZX EDI,word ptr [param_1 + 0x14c8]
 		const uint16_t heatDrainTimer = *(uint16_t *)(param1 + 0x14c8);
 
+		// movzx eax,word ptr [param_1 + 0x1abc]
+		const uint16_t incomingDamage = *(uint16_t *)(param1 + 0x1abc);
+
 		if (s_Debug) {
 			if (origHeatFunc != verifyHeatFunc || verifyHeatFunc == nullptr) {
 				DebugBreak();
@@ -103,6 +107,11 @@ namespace LegacyHeatFix {
 			}
 			else if (didNotProcessRegHit && (!successfulRegularHit || heatDrainTimer > 0x1)) {
 				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
+			}
+
+			// Wasn't able to trigger this one but I am certain it does happen at least occasionally.
+			if (didNotProcessEnemyHit && incomingDamage == 0) {
+				DebugBreak(); // Should have subtracted Heat on last frame but missed it due to 30fps cap on UpdateHeat
 			}
 
 			dbg_msg = format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
@@ -127,6 +136,7 @@ namespace LegacyHeatFix {
 			counter++;
 			didNotProcessGrabHit = false;
 			didNotProcessRegHit = false;
+			didNotProcessEnemyHit = false;
 		}
 		else {
 			/*
@@ -147,6 +157,7 @@ namespace LegacyHeatFix {
 				counter = 0;
 				didNotProcessGrabHit = false;
 				didNotProcessRegHit = false;
+				didNotProcessEnemyHit = false;
 			}
 			else {
 				if (successfulGrabHit) {
@@ -154,6 +165,9 @@ namespace LegacyHeatFix {
 				}
 				else if (successfulRegularHit) {
 					didNotProcessRegHit = true;
+				}
+				if (incomingDamage > 0) {
+					didNotProcessEnemyHit = true;
 				}
 			}
 			counter++;
