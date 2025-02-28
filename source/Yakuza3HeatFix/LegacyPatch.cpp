@@ -52,6 +52,7 @@ namespace LegacyHeatFix {
 	static bool didNotProcessGrabHit = false;
 	static bool didNotProcessRegHit = false;
 	static bool didNotProcessEnemyHit = false;
+	static bool didNotProcessBlock = false;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
 		// MOV  param_1,qword ptr [DAT_14122cde8]
@@ -97,21 +98,37 @@ namespace LegacyHeatFix {
 		// movzx eax,word ptr [param_1 + 0x1abc]
 		const uint16_t incomingDamage = *(uint16_t *)(param1 + 0x1abc);
 
+		// CMP word ptr [RBX + 0x1ac0],SI
+		const uint16_t blockedDamage = *(uint16_t *)(param1 + 0x1ac0);
+
 		if (s_Debug) {
 			if (origHeatFunc != verifyHeatFunc || verifyHeatFunc == nullptr) {
 				DebugBreak();
+				utils::Log("");
 			}
 
 			if (didNotProcessGrabHit && (!successfulGrabHit || heatDrainTimer > 0x1)) {
+				// Does indeed happen
 				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
+				utils::Log("");
 			}
 			else if (didNotProcessRegHit && (!successfulRegularHit || heatDrainTimer > 0x1)) {
+				// Does indeed happen
 				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
+				utils::Log("");
+			}
+
+			// Important when blocking hits with unlocked "Tortoise Spirit" upgrade
+			if (didNotProcessBlock && blockedDamage == 0) {
+				// Does indeed happen
+				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
+				utils::Log("");
 			}
 
 			// Wasn't able to trigger this one but I am certain it does happen at least occasionally.
 			if (didNotProcessEnemyHit && incomingDamage == 0) {
 				DebugBreak(); // Should have subtracted Heat on last frame but missed it due to 30fps cap on UpdateHeat
+				utils::Log("");
 			}
 
 			dbg_msg = format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
@@ -137,6 +154,7 @@ namespace LegacyHeatFix {
 			didNotProcessGrabHit = false;
 			didNotProcessRegHit = false;
 			didNotProcessEnemyHit = false;
+			didNotProcessBlock = false;
 		}
 		else {
 			/*
@@ -158,6 +176,7 @@ namespace LegacyHeatFix {
 				didNotProcessGrabHit = false;
 				didNotProcessRegHit = false;
 				didNotProcessEnemyHit = false;
+				didNotProcessBlock = false;
 			}
 			else {
 				if (successfulGrabHit) {
@@ -165,6 +184,9 @@ namespace LegacyHeatFix {
 				}
 				else if (successfulRegularHit) {
 					didNotProcessRegHit = true;
+				}
+				if (blockedDamage > 0) {
+					didNotProcessBlock = true;
 				}
 				if (incomingDamage > 0) {
 					didNotProcessEnemyHit = true;
