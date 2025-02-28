@@ -201,56 +201,80 @@ namespace HeatFix {
 
 		// movzx eax,word ptr [param_1 + 0x1abc]
 		const uint16_t incomingDamage = *(uint16_t *)((uintptr_t)playerActor + 0x1abc);
-		const bool isDrunk = IsPlayerDrunk(playerActor);
 
-		// MOV RBX,dword ptr [param_1 + 0x1a3c]
-		const uint32_t playerStatus = *(uint32_t *)((uintptr_t)playerActor + 0x1a3c);
-		switch (playerStatus) {
-		case 0:
-			utils::Log(""); break; // default value?
-		case 1:
-			utils::Log(""); break; // player locks on to the enemy?
-		case 2:
-			utils::Log(""); break; // player uses LH, HH, Grab (but misses the grab?)
-		case 3:
-			utils::Log(""); break; // player gets hit by the enemy
-		case 4:
-			utils::Log(""); break; // player gets knocked down by the enemy?
-		case 5:
-			utils::Log(""); break; // player uses dodge
-		case 6:
-			utils::Log(""); break; // player is lying on the ground?
-		case 7:
-			utils::Log(""); break; // player uses block
-		case 8:
-			utils::Log(""); break; // player picks up an object/weapon?
-		case 9:
-			utils::Log(""); break; // player grabs the enemy
-		case 10:
-			utils::Log(""); break; // enemy grabs the player
-		case 11:
-			utils::Log(""); break; // player uses HH on grabbed enemy?
-		case 12:
-			utils::Log(""); break; // enemy escapes the player's grab?
-		case 15:
-			utils::Log(""); break; // player starts Heat move?
-		case 16:
-			utils::Log(""); break; // enemy throws the player
-		case 17:
-			utils::Log(""); break; // player tries to throw the enemy, player uses LH on grabbed enemy
-		case 19:
-			utils::Log(""); break; // player uses taunt
-		default:
-			utils::Log(""); break;
+		/*
+		* There are only 2 ways in which Heat can be lowered by UpdateHeat():
+		* 1. Subtracting a fixed amount when hit/damaged by the enemy
+		* 2. Continuous drain after the drain timer hits its maximum value
+		* 
+		* The first one works as intended in Y3R. Each hit is registered for a single
+		* frame and only subtracts a fixed amount from the Heat value on the same frame.
+		* The second one drains Heat at twice the intended/PS3 rate.
+		* 
+		* Conveniently - only one of these can happen on any particular frame and Heat
+		* loss from taking damage always takes priority over "regular" Heat drain.
+		* So by verifying that we didn't get damaged on this frame, we can halve the
+		* continuous drain rate without impacting anything else.
+		* 
+		* The rules for gaining Heat are a bit more involved. Which is why I've chosen to
+		* patch sources of Heat gain right where they happen. So by the time we get to this
+		* function here, Heat gain will already have been handled/corrected.
+		*/
+		float retHeatVal = newHeatVal;
+		if (newHeatVal < oldHeatVal && incomingDamage == 0) {
+			if (s_Debug) {
+				if (newDrainTimer != MAX_DrainTimer || baseDrainRate == 0.0f) {
+					DebugBreak(); // should never happen
+					utils::Log("");
+				}
+			}
+
+			// halve rate of Heat drain
+			retHeatVal = oldHeatVal - (heatDiff * floatMulti);
 		}
 
 		if (s_Debug) {
-			/*
-			if (unkXMM2 != 0.0f) {
-				DebugBreak();
-				utils::Log(""); // XMM2 seems to always be 0.0f
+			const bool isDrunk = IsPlayerDrunk(playerActor);
+			// MOV RBX,dword ptr [param_1 + 0x1a3c]
+			const uint32_t playerStatus = *(uint32_t *)((uintptr_t)playerActor + 0x1a3c);
+			switch (playerStatus) {
+			case 0:
+				utils::Log(""); break; // default value?
+			case 1:
+				utils::Log(""); break; // player locks on to the enemy?
+			case 2:
+				utils::Log(""); break; // player uses LH, HH, Grab (but misses the grab?)
+			case 3:
+				utils::Log(""); break; // player gets hit by the enemy
+			case 4:
+				utils::Log(""); break; // player gets knocked down by the enemy?
+			case 5:
+				utils::Log(""); break; // player uses dodge
+			case 6:
+				utils::Log(""); break; // player is lying on the ground?
+			case 7:
+				utils::Log(""); break; // player uses block
+			case 8:
+				utils::Log(""); break; // player picks up an object/weapon?
+			case 9:
+				utils::Log(""); break; // player grabs the enemy
+			case 10:
+				utils::Log(""); break; // enemy grabs the player
+			case 11:
+				utils::Log(""); break; // player uses HH on grabbed enemy?
+			case 12:
+				utils::Log(""); break; // enemy escapes the player's grab?
+			case 15:
+				utils::Log(""); break; // player starts Heat move?
+			case 16:
+				utils::Log(""); break; // enemy throws the player
+			case 17:
+				utils::Log(""); break; // player tries to throw the enemy, player uses LH on grabbed enemy
+			case 19:
+				utils::Log(""); break; // player uses taunt
+			default:
+				DebugBreak(); utils::Log(""); break;
 			}
-			*/
 
 			// CMP  byte ptr [RBX + 0x1a49],0x3
 			// JNZ +0x0e
@@ -285,7 +309,7 @@ namespace HeatFix {
 			if (playerStatus == 4) {
 				utils::Log(format(
 					"{:s} - {:d} - TzNow: {:s} - heatDiff: {:f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
-					"GetNewHeatValue", dbg_Counter5++, utils::TzString_ms(), heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 5
+					"GetNewHeatValue", dbg_Counter4++, utils::TzString_ms(), heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 4
 				);
 			}
 
@@ -303,18 +327,19 @@ namespace HeatFix {
 				expectedDiff *= 10.0f;
 			}
 
-			if (incomingDamage == 0 && newHeatVal <= oldHeatVal && heatDiff != expectedDiff) {
+			if (incomingDamage == 0 && newHeatVal <= oldHeatVal && heatDiff != expectedDiff && heatDiff != oldHeatVal) {
 				DebugBreak();
  				utils::Log("");
 			}
 
 			utils::Log(format(
-				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - heatDiff: {:f} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
-				"GetNewHeatValue", dbg_Counter4++, utils::TzString_ms(), (void *)playerActor, oldHeatVal, newHeatVal, heatDiff, incomingDamage, baseDrainRate, newDrainTimer), 4
+				"{:s} - {:d} - TzNow: {:s} - oldHeatVal: {:f} - newHeatVal: {:f} - heatDiff: {:f} - retHeatVal: {:f} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
+				"GetNewHeatValue", dbg_Counter5++, utils::TzString_ms(), oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer), 5
 			);
 		}
+
 		//return GetCurrentHeatValue(playerActor); // Heat won't change with regular hits
-		return newHeatVal;
+		return retHeatVal;
 	}
 }
 
