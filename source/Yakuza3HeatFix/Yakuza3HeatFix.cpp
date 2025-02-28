@@ -30,6 +30,7 @@ namespace HeatFix {
 
 	typedef bool(*GetActorBoolType)(void **);
 	typedef float(*GetActorFloatType)(void **);
+	static GetActorBoolType verifyIsPlayerDrunk = nullptr;
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
 	static constexpr float floatMulti = 0.5f; // for float values that have to be halved when running at 60 fps
 
@@ -41,7 +42,8 @@ namespace HeatFix {
 
 		if (s_Debug) {
 			if (getCurHeat != verifyGetCurHeat || verifyGetCurHeat == nullptr) {
-				DebugBreak();
+				DebugBreak(); // should never happen
+				utils::Log("");
 			}
 		}
 		const float curHeat = getCurHeat(playerActor);
@@ -61,7 +63,8 @@ namespace HeatFix {
 
 		if (s_Debug) {
 			if (getMaxHeat != verifyGetMaxHeat || verifyGetMaxHeat == nullptr) {
-				DebugBreak();
+				DebugBreak(); // should never happen
+				utils::Log("");
 			}
 		}
 		const float maxHeat = getMaxHeat(playerActor);
@@ -78,6 +81,13 @@ namespace HeatFix {
 		// CALL qword ptr [RAX + 0x290]
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
 		GetActorBoolType IsDrunk = (GetActorBoolType)vfTable[0x290 / sizeof(uintptr_t)];
+
+		if (s_Debug) {
+			if (IsDrunk != verifyIsPlayerDrunk || verifyIsPlayerDrunk == nullptr) {
+				DebugBreak(); // should never happen
+				utils::Log("");
+			}
+		}
 		return IsDrunk(playerActor);
 	}
 
@@ -388,6 +398,13 @@ void OnInitializeHook()
 					verifyGetMaxHeat = (GetActorFloatType)match.get<void>();
 				}
 
+				// IsPlayerDrunk - verify we're calling the correct function
+				auto isPlayerDrunkPattern = pattern("48 8b 91 10 15 00 00 33 c0 66 83 7a 20 0a");
+				if (isPlayerDrunkPattern.count_hint(1).size() == 1) {
+					const auto match = isPlayerDrunkPattern.get_one();
+					verifyIsPlayerDrunk = (GetActorBoolType)match.get<void>();
+				}
+
 				// Call to IsPlayerDrunk() in the block that's executed if (incoming damage > 0)
 				// Just using this to check whether the Heat value changed before this point or not
 				auto callIsPlayerDrunk = pattern("ff 90 90 02 00 00 85 c0 74 05 c4 c1 4a 59 f2 c4 c1");
@@ -398,10 +415,10 @@ void OnInitializeHook()
 					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
 					Nop(callAddr, 6);
 
-					// RSP is already properly aligned at this point since we replace a call with another call
-					// RCX contains the address of the player actor
+					// RSP is already properly aligned at this point since we replace a call with another call.
+					// RCX contains the address of the player actor.
 					const uint8_t payload[] = {
-						0x48, 0x81, 0xec, 0x80, 0x00, 0x00, 0x00, // sub rsp, 0x80 (0x20 shadow space for callee + 0x60 for XMM register backups)
+						0x48, 0x81, 0xec, 0x80, 0x00, 0x00, 0x00, // sub rsp, 0x80 (0x20 shadow space + 0x60 for XMM backups)
 						0x0f, 0x29, 0x44, 0x24, 0x20, //  movaps XMMWORD PTR[rsp + 0x20],xmm0
 						0x0f, 0x29, 0x4c, 0x24, 0x30, //  movaps XMMWORD PTR[rsp + 0x30],xmm1
 						0x0f, 0x29, 0x54, 0x24, 0x40, //  movaps XMMWORD PTR[rsp + 0x40],xmm2
@@ -437,7 +454,7 @@ void OnInitializeHook()
 			/*
 			* 66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd
 			* 
-			* This is the section responsible for incrementing the Heat drain timer every time it gets reached.
+			* This is at the start of the section responsible for incrementing the Heat drain timer every time it gets reached.
 			* There are a few more rules to it, but in general this is executed on every frame where all of these are true:
 			* - Combat is ongoing (i.e. NOT paused by combat intro/outro or Heat moves)
 			* - The player is alive and player's health is above 19%
@@ -604,7 +621,7 @@ void OnInitializeHook()
 				// 0xc4, 0x41, 0x32, 0x58, 0xcb (vaddss xmm9,xmm9,xmm11)
 				Nop(addAddr, 5);
 
-				// XMM11 will contain the original boost value.
+				// XMM11 will contain the original boost value (which we want to halve).
 				const uint8_t payload[] = {
 					0x00, 0x00, 0x00, 0x00, // floatMulti
 					0xf3, 0x44, 0x0f, 0x59, 0x1d, 0x00, 0x00, 0x00, 0x00, // mulss xmm11, dword ptr [floatMulti]
@@ -635,13 +652,12 @@ void OnInitializeHook()
 				Nop(callAddr, 6);
 
 				const uint8_t payload[] = {
-					0x0f, 0x57, 0xc9, // xorps xmm1, xmm1 (zero-out xmm1, for testing/debugging purposes)
-					0x0f, 0x28, 0xce, // movaps xmm1, xmm6 (copy calculated Heat value to param2)
+					0x0f, 0x28, 0xce, // movaps xmm1, xmm6 (copy new/calculated Heat value to param2)
 					0x0f, 0x28, 0xd7, // movaps xmm2, xmm7 (copy baseDrainRate to param3)
 					0x41, 0x89, 0xf9, // mov r9d, edi (copy new Heat drain timer to param4)
 					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetNewHeatValue
 					0xff, 0xd0, // call rax
-					0x0f, 0x28, 0xf0, // movaps xmm6, xmm0 (copy returned/new Heat value to XMM6)
+					0x0f, 0x28, 0xf0, // movaps xmm6, xmm0 (copy new/returned Heat value to XMM6)
 					0x48, 0x89, 0xd9, // mov rcx, rbx (copy address of playerActor to param1)
 					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetMaxHeatValue
 					0xff, 0xd0, // call rax
@@ -649,19 +665,20 @@ void OnInitializeHook()
 				};
 				/*
 				* The game expects the player's maximum Heat value to be inside XMM0 and the new/calculated Heat
-				* value inside XMM6 after we return to HeatUpdate()!
+				* value inside XMM6 after we return to HeatUpdate(). 
+				* The new Heat drain timer should be inside (E)DI (which it already is since we don't change it here).
 				* 
-				* Shortly after we return to the game's own code, the contents of (E)DI will be written to memory
-				* as the new value for HeatUpdate()'s drain timer. This is the write instruction:
-				* MOV word ptr [RBX + 0x14c8],DI
+				* Shortly after we return to HeatUpdate(), the game will do a few final checks on these values
+				* (e.g. making sure that the new Heat value doesn't exceed the maximum Heat value) and then
+				* write them to memory.
 				*/
 
 				std::byte *space = trampoline->RawSpace(sizeof(payload));
 				memcpy(space, payload, sizeof(payload));
 
 				auto pGetNewHeatValue = utils::GetFuncAddr(GetNewHeatValue);
-				// 3 + 3 + 3 + 3 + 2 = 14
-				memcpy(space + 14, &pGetNewHeatValue, sizeof(pGetNewHeatValue));
+				// 3 + 3 + 3 + 2 = 11
+				memcpy(space + 11, &pGetNewHeatValue, sizeof(pGetNewHeatValue));
 
 				auto pGetMaxHeatValue = utils::GetFuncAddr(GetMaxHeatValue);
 				// 5 + 2 + 8 = 15
