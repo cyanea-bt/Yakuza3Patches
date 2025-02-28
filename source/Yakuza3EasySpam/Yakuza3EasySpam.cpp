@@ -24,10 +24,10 @@ namespace EasySpam {
 	using namespace std;
 	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
 
-	typedef uint8_t(*GetEnemyThrowResistanceType)(uintptr_t);
+	typedef uint8_t (*GetEnemyThrowResistanceType)(uintptr_t);
 	static GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
-	typedef uint8_t(*AddHeatType)(uintptr_t, int32_t);
+	typedef uint8_t (*AddHeatType)(uintptr_t, int32_t);
 	static AddHeatType addHeatFunc = nullptr;
 
 	// param1 here is the address of the player actor object

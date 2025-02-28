@@ -23,13 +23,13 @@ static config::Config s_Config;
 
 namespace HeatFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0, dbg_Counter5 = 0, dbg_Counter6 = 0;
+	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0, dbg_Counter5 = 0, dbg_Counter6 = 0, dbg_Counter7 = 0;
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
 
-	typedef bool(*GetActorBoolType)(void **);
-	typedef float(*GetActorFloatType)(void **);
+	typedef bool (*GetActorBoolType)(void **);
+	typedef float (*GetActorFloatType)(void **);
 	static GetActorBoolType verifyIsPlayerDrunk = nullptr;
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
 	static constexpr float floatMulti = 0.5f; // for float values that have to be halved when running at 60 fps
@@ -97,19 +97,43 @@ namespace HeatFix {
 			const uint16_t incomingDamage = *(uint16_t *)((uintptr_t)playerActor + 0x1abc);
 
 			const float oldHeatVal = GetCurrentHeatValue(playerActor);
-			if (newHeatVal != oldHeatVal) {
-				DebugBreak(); // AFAIK - Heat value should be unchanged at this point, unless player and enemy hit each other on the same frame
+			if (newHeatVal != oldHeatVal && newDrainTimer != 0) {
+				// AFAIK - Heat value should be unchanged at this point, unless player and enemy hit each other on the same frame
+				// In that rare case (newDrainTimer) should be == 0, since the player hitting the enemy resets it to 0
+				DebugBreak();
 				utils::Log("");
 			}
 
 			utils::Log(format(
 				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - newDrainTimer: {:d} - incomingDamage: {:d}",
-				"GetNewHeatDrainTimer", dbg_Counter6++, utils::TzString_ms(), (void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
+				"PatchedIsPlayerDrunk", dbg_Counter6++, utils::TzString_ms(), (void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
 			);
 		}
 
 		return IsPlayerDrunk(playerActor);
 	}
+
+
+	typedef char* (*GetDisplayStringType)(void *, uint32_t, uint32_t);
+	static GetDisplayStringType origGetDisplayString = nullptr;
+	static string replaceStr("Cool replacement string");
+
+	static char* PatchedGetDisplayString(void *param1, uint32_t param2, uint32_t param3) {
+		char *retVal = origGetDisplayString(param1, param2, param3);
+		const string str(retVal);
+		if (s_Debug) {
+			utils::Log(format(
+				"{:s} - {:d} - TzNow: {:s} - param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
+				"PatchedGetDisplayString", dbg_Counter7++, utils::TzString_ms(), param1, param2, param3, (void *)retVal, str), 7
+			);
+		}
+
+		if (str == "Goro Majima" || str == "Rikiya Shimabukuro" || str == "Tetsuo Tamashiro") {
+			retVal = replaceStr.data();
+		}
+		return retVal;
+	}
+
 
 	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t curDrainTimer) {
 		uint16_t newDrainTimer;
@@ -244,6 +268,9 @@ namespace HeatFix {
 				retHeatVal = oldHeatVal - (heatDiff * floatMulti);
 			}
 			if (retHeatVal < 0.0f) {
+				// newHeatVal parameter can be negative if the current frame's Heat loss exceeds
+				// the remaining amount of Heat. The game expects us to check for negative values
+				// and return 0.0f in that case.
 				retHeatVal = 0.0f;
 			}
 		}
@@ -311,7 +338,10 @@ namespace HeatFix {
 			else if (unkUInt1 == 4) { // while player is locked on to the enemy?
 				utils::Log("");
 			}
-			else if (unkUInt1 > 4) {
+			else if (unkUInt1 == 8) { // "Komaki Cat-Like Reflexes" (i.e. doing a backflip instead of falling down)
+				utils::Log("");
+			}
+			else if (unkUInt1 > 4 && unkUInt1 != 8) {
 				DebugBreak();
 				utils::Log("");
 			}
@@ -354,6 +384,7 @@ namespace HeatFix {
 		}
 
 		//return GetCurrentHeatValue(playerActor); // Heat won't change with regular hits
+		replaceStr = format("Timer (drain starts at 115): {:03d} ; Current Heat: {:08.2f}", newDrainTimer, retHeatVal);
 		return retHeatVal;
 	}
 }
@@ -388,6 +419,22 @@ void OnInitializeHook()
 				utils::Log("", 4);
 				utils::Log("", 5);
 				utils::Log("", 6);
+				utils::Log("", 7);
+
+				/*
+				* e8 ?? ?? ?? ?? 4c 8b f8 48 8b ac 24 98
+				* 
+				* Call to function that returns a string (char *). Returned string is then rendered to the screen.
+				* This call in particular seems to fetch the DisplayString of the (targeted) enemy.
+				*/
+				auto callGetDisplayString = pattern("e8 ? ? ? ? 4c 8b f8 48 8b ac 24 98");
+				if (callGetDisplayString.count_hint(1).size() == 1) {
+					utils::Log("Found pattern: GetDisplayString");
+					const auto match = callGetDisplayString.get_one();
+					Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
+					ReadCall(match.get<void>(), origGetDisplayString);
+					InjectHook(match.get<void>(), trampoline->Jump(PatchedGetDisplayString), PATCH_CALL);
+				}
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -418,6 +465,8 @@ void OnInitializeHook()
 					const void *callAddr = match.get<void>();
 					const void *retAddr = match.get<void>(6);
 					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					// Nop this instruction:
+					// 0xff, 0x90, 0x90, 0x02, 0x00, 0x00 (CALL qword ptr [RAX + 0x290])
 					Nop(callAddr, 6);
 
 					// RSP is already properly aligned at this point since we replace a call with another call.
@@ -455,6 +504,7 @@ void OnInitializeHook()
 					InjectHook(callAddr, space, PATCH_JUMP);
 				}
 			}
+
 
 			/*
 			* 66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd
@@ -529,6 +579,7 @@ void OnInitializeHook()
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 				InjectHook(patchAddr, space, PATCH_JUMP);
 			}
+
 
 			/*
 			* c5 32 58 0d 57 49 81 00 e9 - Heat boost by "Rescue Card"
@@ -643,8 +694,14 @@ void OnInitializeHook()
 				InjectHook(addAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
 			}
 
+
 			/*
 			* c5 e2 5f f2 ff 90 40 03 00 00
+			* 
+			* Call to GetMaxHeatValue() near the end of UpdateHeat()
+			* The new/calculated Heat value is finalized (except for bounds-checking) before this call is reached.
+			* So this is a good spot to inject our own function and modify the new Heat value right before it gets
+			* written to memory.
 			*/
 			auto finalHeatCalc = pattern("c5 e2 5f f2 ff 90 40 03 00 00");
 			if (finalHeatCalc.count_hint(1).size() == 1) {
@@ -653,10 +710,12 @@ void OnInitializeHook()
 				void *callAddr = match.get<void>(4);
 				void *retAddr = match.get<void>(10);
 				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+				// Nop this instruction:
+				// 0xff, 0x90, 0x40, 0x03, 0x00, 0x00 (CALL qword ptr [RAX + 0x340])
 				Nop(callAddr, 6);
 
 				/*
-				* RBX/RCX contain the address of the player object
+				* RBX/RCX contain the address of the player actor.
 				* XMM3 contains the calculated Heat value (before it is checked against 0.0f and MAX Heat boundaries)
 				* XMM6 contains max(XMM3,0.0f) (i.e. calculated Heat value checked against 0.0f)
 				* 
@@ -684,8 +743,8 @@ void OnInitializeHook()
 				* The new Heat drain timer should be inside (E)DI (which it already is since we don't change it here).
 				* 
 				* Shortly after we return to HeatUpdate(), the game will do a few final checks on these values
-				* (e.g. making sure that the new Heat value doesn't exceed the maximum Heat value) and then
-				* writes them to memory.
+				* (e.g. making sure that the new Heat value doesn't exceed the maximum Heat value) and will then
+				* write them to memory.
 				*/
 
 				std::byte *space = trampoline->RawSpace(sizeof(payload));

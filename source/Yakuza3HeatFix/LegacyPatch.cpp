@@ -31,7 +31,7 @@ namespace LegacyHeatFix {
 	* param1 is probably a pointer to the player actor object
 	* No clue what the other 3 are, but all 4 parameters seem to be 8 bytes wide.
 	*/
-	typedef void(*UpdateHeatType)(uintptr_t, uintptr_t, uintptr_t, uintptr_t);
+	typedef void (*UpdateHeatType)(uintptr_t, uintptr_t, uintptr_t, uintptr_t);
 	static UpdateHeatType origHeatFunc = nullptr;
 	static UpdateHeatType verifyHeatFunc = nullptr;
 	static int counter = 0;
@@ -39,7 +39,7 @@ namespace LegacyHeatFix {
 	static uint32_t(*IsPlayerInCombat)();
 	static uintptr_t(*IsCombatInactive)();
 
-	typedef uint32_t(*IsActorDeadType)(uintptr_t);
+	typedef uint32_t (*IsActorDeadType)(uintptr_t);
 	static IsActorDeadType IsActorDead = nullptr;
 
 	static uintptr_t globalPointer = 0;
