@@ -231,16 +231,21 @@ namespace HeatFix {
 		* function here, Heat gain will already have been handled/corrected.
 		*/
 		float retHeatVal = newHeatVal;
-		if (newHeatVal < oldHeatVal && incomingDamage == 0) {
-			if (s_Debug) {
-				if (newDrainTimer != MAX_DrainTimer || baseDrainRate == 0.0f) {
-					DebugBreak(); // should never happen
-					utils::Log("");
+		if (newHeatVal < oldHeatVal) {
+			if (incomingDamage == 0) {
+				if (s_Debug) {
+					if (newDrainTimer != MAX_DrainTimer || baseDrainRate == 0.0f) {
+						DebugBreak(); // should never happen
+						utils::Log("");
+					}
 				}
-			}
 
-			// halve rate of Heat drain
-			retHeatVal = oldHeatVal - (heatDiff * floatMulti);
+				// halve rate of Heat drain
+				retHeatVal = oldHeatVal - (heatDiff * floatMulti);
+			}
+			if (retHeatVal < 0.0f) {
+				retHeatVal = 0.0f;
+			}
 		}
 
 		if (s_Debug) {
@@ -337,7 +342,7 @@ namespace HeatFix {
 				expectedDiff *= 10.0f;
 			}
 
-			if (incomingDamage == 0 && newHeatVal <= oldHeatVal && heatDiff != expectedDiff && heatDiff != oldHeatVal) {
+			if (incomingDamage == 0 && newHeatVal <= oldHeatVal && heatDiff != expectedDiff) {
 				DebugBreak();
  				utils::Log("");
 			}
@@ -458,8 +463,7 @@ void OnInitializeHook()
 			* There are a few more rules to it, but in general this is executed on every frame where all of these are true:
 			* - Combat is ongoing (i.e. NOT paused by combat intro/outro or Heat moves)
 			* - The player is alive and player's health is above 19%
-			* - The player did NOT hit the enemy
-			* - The player was NOT hit the enemy
+			* - The player was NOT damaged by the enemy
 			*/
 			auto increaseDrainTimer = pattern("66 83 ff 73 8d 6f 01 66 0f 43 ef 0f b7 fd");
 			if (increaseDrainTimer.count_hint(1).size() == 1) {
@@ -651,8 +655,19 @@ void OnInitializeHook()
 				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
 				Nop(callAddr, 6);
 
+				/*
+				* RBX/RCX contain the address of the player object
+				* XMM3 contains the calculated Heat value (before it is checked against 0.0f and MAX Heat boundaries)
+				* XMM6 contains max(XMM3,0.0f) (i.e. calculated Heat value checked against 0.0f)
+				* 
+				* It is important that we use XMM3 and NOT XMM6 to calculate the difference between the last frame's
+				* Heat value and the new value. Otherwise we wouldn't be able to tell the actual difference once we
+				* get closer to 0. I made this mistake in an earlier version, with the result that my modified Heat
+				* value only ever got closer and closer to 0 without ever reaching it (until a rounding error eventually
+				* makes it 0, but that's besides the point).
+				*/
 				const uint8_t payload[] = {
-					0x0f, 0x28, 0xce, // movaps xmm1, xmm6 (copy new/calculated Heat value to param2)
+					0x0f, 0x28, 0xcb, // movaps xmm1, xmm3 (copy new/calculated Heat value to param2)
 					0x0f, 0x28, 0xd7, // movaps xmm2, xmm7 (copy baseDrainRate to param3)
 					0x41, 0x89, 0xf9, // mov r9d, edi (copy new Heat drain timer to param4)
 					0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // movabs rax, GetNewHeatValue
@@ -670,7 +685,7 @@ void OnInitializeHook()
 				* 
 				* Shortly after we return to HeatUpdate(), the game will do a few final checks on these values
 				* (e.g. making sure that the new Heat value doesn't exceed the maximum Heat value) and then
-				* write them to memory.
+				* writes them to memory.
 				*/
 
 				std::byte *space = trampoline->RawSpace(sizeof(payload));
