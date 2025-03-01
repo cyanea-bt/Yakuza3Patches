@@ -2,8 +2,6 @@
 #include "Yakuza3.h"
 
 
-config::Config CONFIG;
-
 namespace Yakuza3 {
 	using namespace std;
 	using namespace hook;

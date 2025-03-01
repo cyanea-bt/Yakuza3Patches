@@ -11,6 +11,7 @@ namespace config {
 		j["Version"] = e.Version;
 		j["EnablePatch"] = e.EnablePatch;
 		j["ForcePatch"] = e.ForcePatch;
+		j["ShowHeatValues"] = e.ShowHeatValues;
 		j["UseOldPatch"] = e.UseOldPatch;
 		j["DrainTimeMulti"] = e.DrainTimeMulti;
 		j["DisableHeatDrain"] = e.DisableHeatDrain;
@@ -21,6 +22,7 @@ namespace config {
 		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
 		e.ForcePatch = jsonToBool(j.at("ForcePatch"), defaults.ForcePatch);
+		e.ShowHeatValues = jsonToBool(j.at("ShowHeatValues"), defaults.ShowHeatValues);
 		e.UseOldPatch = jsonToBool(j.at("UseOldPatch"), defaults.UseOldPatch);
 		e.DrainTimeMulti = jsonToNumber<uint8_t>(j.at("DrainTimeMulti"), 1, defaults.DrainTimeMulti);
 		e.DisableHeatDrain = jsonToBool(j.at("DisableHeatDrain"), defaults.DisableHeatDrain);

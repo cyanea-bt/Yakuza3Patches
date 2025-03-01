@@ -20,19 +20,19 @@ namespace HeatFix {
 		// MOV RAX,qword ptr [param_1]
 		// CALL qword ptr [RAX + 0x338]
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
-		GetActorFloatType getCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
+		GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
 
 		if (isDEBUG) {
-			if (getCurHeat != verifyGetCurHeat || verifyGetCurHeat == nullptr) {
+			if (GetCurHeat != verifyGetCurHeat || verifyGetCurHeat == nullptr) {
 				DebugBreak(); // should never happen
 				utils::Log("");
 			}
 		}
-		const float curHeat = getCurHeat(playerActor);
+		const float curHeat = GetCurHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getCurHeat: {:p} - curHeat: {:f}",
-				"GetCurrentHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getCurHeat, curHeat), 1);
+			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:f}",
+				"GetCurrentHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat), 1);
 		}
 		return curHeat;
 	}
@@ -41,19 +41,19 @@ namespace HeatFix {
 		// MOV RAX,qword ptr [param_1]
 		// CALL qword ptr [RAX + 0x340]
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
-		GetActorFloatType getMaxHeat = (GetActorFloatType)vfTable[0x340 / sizeof(uintptr_t)];
+		GetActorFloatType GetMaxHeat = (GetActorFloatType)vfTable[0x340 / sizeof(uintptr_t)];
 
 		if (isDEBUG) {
-			if (getMaxHeat != verifyGetMaxHeat || verifyGetMaxHeat == nullptr) {
+			if (GetMaxHeat != verifyGetMaxHeat || verifyGetMaxHeat == nullptr) {
 				DebugBreak(); // should never happen
 				utils::Log("");
 			}
 		}
-		const float maxHeat = getMaxHeat(playerActor);
+		const float maxHeat = GetMaxHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getMaxHeat: {:p} - maxHeat: {:f}",
-				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getMaxHeat, maxHeat), 2);
+			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:f}",
+				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat), 2);
 		}
 		return maxHeat;
 	}
@@ -110,7 +110,17 @@ namespace HeatFix {
 			);
 		}
 
-		if (str == "Goro Majima" || str == "Rikiya Shimabukuro" || str == "Tetsuo Tamashiro") {
+		// param3 is always 1?
+		if (PlayerActor != nullptr && !str.empty()) {
+			// MOVZX EDI,word ptr [PlayerActor + 0x14c8]
+			const uint16_t heatDrainTimer = *(uint16_t *)((uintptr_t)PlayerActor + 0x14c8);
+
+			// CALL qword ptr [PlayerActor + 0x338]
+			uintptr_t *vfTable = (uintptr_t *)*PlayerActor;
+			GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
+			const float heatValue = GetCurHeat(PlayerActor);
+
+			replaceStr = format("Timer (drain starts at 115): {:03d} ; Current Heat: {:08.2f}", heatDrainTimer, heatValue);
 			retVal = replaceStr.data();
 		}
 		return retVal;
@@ -366,7 +376,7 @@ namespace HeatFix {
 		}
 
 		//return GetCurrentHeatValue(playerActor); // Heat won't change with regular hits
-		replaceStr = format("Timer (drain starts at 115): {:03d} ; Current Heat: {:08.2f}", newDrainTimer, retHeatVal);
+		PlayerActor = playerActor; // save address of player actor for use in PatchedGetDisplayString()
 		return retHeatVal;
 	}
 }
@@ -401,21 +411,6 @@ void OnInitializeHook()
 				utils::Log("", 5);
 				utils::Log("", 6);
 				utils::Log("", 7);
-
-				/*
-				* e8 ?? ?? ?? ?? 4c 8b f8 48 8b ac 24 98
-				* 
-				* Call to function that returns a string (char *). Returned string is then rendered to the screen.
-				* This call in particular seems to fetch the DisplayString of the (targeted) enemy.
-				*/
-				auto callGetDisplayString = pattern("e8 ? ? ? ? 4c 8b f8 48 8b ac 24 98");
-				if (callGetDisplayString.count_hint(1).size() == 1) {
-					utils::Log("Found pattern: GetDisplayString");
-					const auto match = callGetDisplayString.get_one();
-					Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
-					ReadCall(match.get<void>(), origGetDisplayString);
-					InjectHook(match.get<void>(), trampoline->Jump(PatchedGetDisplayString), PATCH_CALL);
-				}
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -742,6 +737,25 @@ void OnInitializeHook()
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 				InjectHook(callAddr, space, PATCH_JUMP);
 			}
+		}
+	}
+
+	if (CONFIG.ShowHeatValues) {
+		using namespace HeatFix;
+
+		/*
+		* e8 ?? ?? ?? ?? 4c 8b f8 48 8b ac 24 98
+		*
+		* Call to function that returns a string (char *). Returned string is then rendered to the screen.
+		* This call in particular seems to fetch the DisplayString of the (targeted) enemy.
+		*/
+		auto callGetDisplayString = pattern("e8 ? ? ? ? 4c 8b f8 48 8b ac 24 98");
+		if (callGetDisplayString.count_hint(1).size() == 1) {
+			utils::Log("Found pattern: GetDisplayString");
+			const auto match = callGetDisplayString.get_one();
+			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
+			ReadCall(match.get<void>(), origGetDisplayString);
+			InjectHook(match.get<void>(), trampoline->Jump(PatchedGetDisplayString), PATCH_CALL);
 		}
 	}
 

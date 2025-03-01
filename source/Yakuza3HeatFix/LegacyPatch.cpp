@@ -37,6 +37,8 @@ namespace LegacyHeatFix {
 	static bool didNotProcessBlock = false;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
+		HeatFix::PlayerActor = (void **)param1; // save address of player actor for use in PatchedGetDisplayString()
+
 		// MOV  param_1,qword ptr [DAT_14122cde8]
 		// CMP  dword ptr[param_1 + 0x8], EAX
 		pIsCombatFinished = *(uintptr_t *)globalPointer;
@@ -91,26 +93,22 @@ namespace LegacyHeatFix {
 
 			if (didNotProcessGrabHit && (!successfulGrabHit || heatDrainTimer > 0x1)) {
 				// Does indeed happen
-				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
-				utils::Log("");
+				utils::Log(""); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
 			}
 			else if (didNotProcessRegHit && (!successfulRegularHit || heatDrainTimer > 0x1)) {
 				// Does indeed happen
-				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
-				utils::Log("");
+				utils::Log(""); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
 			}
 
 			// Important when blocking hits with unlocked "Tortoise Spirit" upgrade
 			if (didNotProcessBlock && blockedDamage == 0) {
 				// Does indeed happen
-				DebugBreak(); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
-				utils::Log("");
+				utils::Log(""); // Should have reset drain timer on last frame but missed it due to 30fps cap on UpdateHeat
 			}
 
 			// Wasn't able to trigger this one but I am certain it does happen at least occasionally.
 			if (didNotProcessEnemyHit && incomingDamage == 0) {
-				DebugBreak(); // Should have subtracted Heat on last frame but missed it due to 30fps cap on UpdateHeat
-				utils::Log("");
+				utils::Log(""); // Should have subtracted Heat on last frame but missed it due to 30fps cap on UpdateHeat
 			}
 
 			dbg_msg = format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
