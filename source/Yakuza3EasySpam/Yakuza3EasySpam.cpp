@@ -18,6 +18,11 @@ namespace EasySpam {
 		uintptr_t pAddHeat = *(uintptr_t *)(param1);
 		pAddHeat = *(uintptr_t *)(pAddHeat + 0x318);
 		const AddHeatType addHeat = (AddHeatType)pAddHeat;
+		if (isDEBUG) {
+			if (addHeat != addHeatFunc) {
+				DebugBreak(); // verify we're calling the correct function
+			}
+		}
 
 		int32_t newChargeAmount = 32000; // just need some sensible upper limit (MAX Heat in Chapter 1 seems to be 8000)
 		if ((oldChargeAmount * CONFIG.FeelTheHeatChargeMulti) < newChargeAmount) {
@@ -31,9 +36,6 @@ namespace EasySpam {
 		const uint8_t result = addHeat(param1, newChargeAmount);
 
 		if (isDEBUG) {
-			if (addHeat != addHeatFunc) {
-				DebugBreak(); // verify we're calling the correct function
-			}
 			utils::Log(format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
 				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, CONFIG.FeelTheHeatChargeMulti, newChargeAmount, result), 4);
 		}
@@ -75,6 +77,11 @@ namespace EasySpam {
 		uintptr_t pGetEnemyThrowResistance = *(uintptr_t *)(param1);
 		pGetEnemyThrowResistance = *(uintptr_t *)(pGetEnemyThrowResistance + 0xb40);
 		const GetEnemyThrowResistanceType orig = (GetEnemyThrowResistanceType)pGetEnemyThrowResistance;
+		if (isDEBUG) {
+			if (orig != enemyThrowResFunc) {
+				DebugBreak(); // verify we're calling the correct function
+			}
+		}
 
 		const uint8_t origThrowRes = orig(param1);
 		uint8_t easyThrowRes = origThrowRes / CONFIG.EnemyThrowResDiv;
@@ -86,9 +93,6 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			if (orig != enemyThrowResFunc) {
-				DebugBreak(); // verify we're calling the correct function
-			}
 			utils::Log(format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - EnemyThrowResDiv: {:d} - easyThrowRes: {:d}", 
 				utils::TzString_ms(), dbg_Counter1++, origThrowRes, CONFIG.EnemyThrowResDiv, easyThrowRes), 1);
 		}
@@ -133,14 +137,14 @@ void OnInitializeHook()
 			// GetEnemyThrowResistance - to verify we're calling the correct function
 			auto enemyThrowCheck = pattern("0f b6 81 ba 1c 00 00 c3");
 			if (enemyThrowCheck.count_hint(1).size() == 1) {
-				auto match = enemyThrowCheck.get_one();
+				const auto match = enemyThrowCheck.get_one();
 				enemyThrowResFunc = (GetEnemyThrowResistanceType)match.get<void>();
 			}
 
 			// AddHeat - to verify we're calling the correct function
 			auto addHeatPattern = pattern("48 89 5c 24 08 57 48 83 ec 30 48 8b 01 8b fa 48 8b d9 ff 90 20 03 00 00");
 			if (addHeatPattern.count_hint(1).size() == 1) {
-				auto match = addHeatPattern.get_one();
+				const auto match = addHeatPattern.get_one();
 				addHeatFunc = (AddHeatType)match.get<void>();
 			}
 		}
@@ -156,7 +160,7 @@ void OnInitializeHook()
 		auto enemyThrowResistance = pattern("ff 92 40 0b 00 00 3a d8");
 		if (enemyThrowResistance.count_hint(1).size() == 1) {
 			utils::Log("Found pattern: GetEnemyThrowResistance");
-			auto match = enemyThrowResistance.get_one();
+			const auto match = enemyThrowResistance.get_one();
 			Trampoline *trampoline = Trampoline::MakeTrampoline(match.get<void>());
 			Nop(match.get<void>(), 6);
 			InjectHook(match.get<void>(), trampoline->Jump(PatchedGetEnemyThrowResistance), PATCH_CALL);
@@ -171,9 +175,9 @@ void OnInitializeHook()
 		auto incThrowResistance = pattern("84 c0 74 08 fe c0 88 81 ba 1c 00 00");
 		if (incThrowResistance.count_hint(1).size() == 1) {
 			utils::Log("Found pattern: IncreaseThrowResistance");
-			auto match = incThrowResistance.get_one();
-			void *incAddr = match.get<void>(4);
-			void *retAddr = (void *)((uintptr_t)incAddr + 8);
+			const auto match = incThrowResistance.get_one();
+			const void *incAddr = match.get<void>(4);
+			const void *retAddr = (void *)((uintptr_t)incAddr + 8);
 			Trampoline *trampoline = Trampoline::MakeTrampoline(incAddr);
 
 			// Nop these 2 instructions to make room for our JMP:
@@ -244,7 +248,7 @@ void OnInitializeHook()
 			std::byte *space = trampoline->RawSpace(sizeof(payload));
 			memcpy(space, payload, sizeof(payload));
 
-			auto funcAddr = utils::GetFuncAddr(PatchedIncThrowResistance);
+			const auto funcAddr = utils::GetFuncAddr(PatchedIncThrowResistance);
 			// 1 + 1 + 3 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 27
 			memcpy(space + 27, &funcAddr, sizeof(funcAddr));
 
@@ -261,10 +265,10 @@ void OnInitializeHook()
 		auto decHoldPower = pattern("44 8d 47 06 eb 37 fe 8b 5e 1b 00 00");
 		if (decHoldPower.count_hint(1).size() == 1) {
 			utils::Log("Found pattern: DecreaseHoldPower");
-			auto match = decHoldPower.get_one();
-			void *decAddr = match.get<void>(6);
-			void *retAddr = (void *)((uintptr_t)decAddr + 6);
-			void *retAddrIfZero = (void *)((uintptr_t)decAddr - 6);
+			const auto match = decHoldPower.get_one();
+			const void *decAddr = match.get<void>(6);
+			const void *retAddr = (void *)((uintptr_t)decAddr + 6);
+			const void *retAddrIfZero = (void *)((uintptr_t)decAddr - 6);
 			Trampoline *trampoline = Trampoline::MakeTrampoline(decAddr);
 
 			// Nop this instruction to make room for our JMP:
@@ -317,7 +321,7 @@ void OnInitializeHook()
 			std::byte *space = trampoline->RawSpace(sizeof(payload));
 			memcpy(space, payload, sizeof(payload));
 
-			auto funcAddr = utils::GetFuncAddr(PatchedDecHoldPower);
+			const auto funcAddr = utils::GetFuncAddr(PatchedDecHoldPower);
 			// 1 + 1 + 7 + 1 + 2 + 2 + 2 + 2 + 3 + 4 + 1 + 4 + 2 = 32
 			memcpy(space + 32, &funcAddr, sizeof(funcAddr));
 
@@ -327,18 +331,28 @@ void OnInitializeHook()
 		}
 
 		/*
-		* ba 2c 01 00 00 ff 90 18 03 00 00
+		* ba 2c 01 00 00 ff 90 18 03 00 00 - Only used in chapter 1? Default charge amount is 300
+		* ba 82 00 00 00 41 ff 90 18 03 00 00 - Used after chapter 1? Default charge amount is 130
 		* 
 		* During the charge "section" of "Feel the Heat" each press of the charge button will call the
 		* AddHeat() function in order to add a fixed amount of Heat to the current Heat value.
 		*/
-		auto chargeFeelTheHeat = pattern("ba 2c 01 00 00 ff 90 18 03 00 00");
-		if (chargeFeelTheHeat.count_hint(1).size() == 1) {
-			utils::Log("Found pattern: ChargeFeelTheHeat");
-			auto match = chargeFeelTheHeat.get_one();
-			void *callAddr = match.get<void>(5);
+		auto chargeFeelTheHeat_1 = pattern("ba 2c 01 00 00 ff 90 18 03 00 00");
+		auto chargeFeelTheHeat_2 = pattern("ba 82 00 00 00 41 ff 90 18 03 00 00");
+		if (chargeFeelTheHeat_1.count_hint(1).size() == 1) {
+			utils::Log("Found pattern: ChargeFeelTheHeat1");
+			const auto match = chargeFeelTheHeat_1.get_one();
+			const void *callAddr = match.get<void>(5);
 			Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
 			Nop(callAddr, 6);
+			InjectHook(callAddr, trampoline->Jump(PatchedChargeFeelTheHeat), PATCH_CALL);
+		}
+		if (chargeFeelTheHeat_2.count_hint(1).size() == 1) {
+			utils::Log("Found pattern: ChargeFeelTheHeat2");
+			const auto match = chargeFeelTheHeat_2.get_one();
+			const void *callAddr = match.get<void>(5);
+			Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+			Nop(callAddr, 7);
 			InjectHook(callAddr, trampoline->Jump(PatchedChargeFeelTheHeat), PATCH_CALL);
 		}
 	}
