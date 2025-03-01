@@ -14,13 +14,13 @@ project "Yakuza3HeatFix"
 	    "rsc_BuildID=0",
 	}
 
-project "Yakuza3EasySpam"
+project "Yakuza3EasyButtonSpam"
 	kind "SharedLib"
 	targetextension ".asi"
 	language "C++"
 
 	defines { 
-	    "rsc_FullName=\"Yakuza3EasySpam\"",
+	    "rsc_FullName=\"Yakuza3EasyButtonSpam\"",
 	    "rsc_MajorVersion=0",
 	    "rsc_MinorVersion=0",
 	    "rsc_RevisionID=1",
