@@ -267,6 +267,13 @@ namespace HeatFix {
 			}
 		}
 
+		if (CONFIG.InfiniteHeat) {
+			retHeatVal = GetMaxHeatValue(playerActor);
+		}
+		else if (CONFIG.ZeroHeat) {
+			retHeatVal = 0.0f;
+		}
+
 		if (isDEBUG) {
 			const bool isDrunk = IsPlayerDrunk(playerActor);
 			// MOV RBX,dword ptr [param_1 + 0x1a3c]
@@ -375,7 +382,6 @@ namespace HeatFix {
 			);
 		}
 
-		//return GetCurrentHeatValue(playerActor); // Heat won't change with regular hits
 		PlayerActor = playerActor; // save address of player actor for use in PatchedGetDisplayString()
 		return retHeatVal;
 	}

@@ -15,6 +15,8 @@ namespace config {
 		j["UseOldPatch"] = e.UseOldPatch;
 		j["DrainTimeMulti"] = e.DrainTimeMulti;
 		j["DisableHeatDrain"] = e.DisableHeatDrain;
+		j["InfiniteHeat"] = e.InfiniteHeat;
+		j["ZeroHeat"] = e.ZeroHeat;
 	}
 
 	void from_json(const json &j, Config &e) {
@@ -26,6 +28,8 @@ namespace config {
 		e.UseOldPatch = jsonToBool(j.at("UseOldPatch"), defaults.UseOldPatch);
 		e.DrainTimeMulti = jsonToNumber<uint8_t>(j.at("DrainTimeMulti"), 1, defaults.DrainTimeMulti);
 		e.DisableHeatDrain = jsonToBool(j.at("DisableHeatDrain"), defaults.DisableHeatDrain);
+		e.InfiniteHeat = jsonToBool(j.at("InfiniteHeat"), defaults.InfiniteHeat);
+		e.ZeroHeat = jsonToBool(j.at("ZeroHeat"), defaults.ZeroHeat);
 		if (json test = e; test != j) {
 			// Check if the converted config values differ from those in the JSON file.
 			// If input JSON contained invalid values, we should overwrite the config file.
