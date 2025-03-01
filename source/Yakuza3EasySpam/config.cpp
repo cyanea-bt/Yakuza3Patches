@@ -11,10 +11,10 @@ namespace config {
 		j["Version"] = e.Version;
 		j["EnablePatch"] = e.EnablePatch;
 		j["ForcePatch"] = e.ForcePatch;
-		j["EnemyThrowResDiv"] = e.EnemyThrowResDiv;
-		j["EnemyThrowResInc"] = e.EnemyThrowResInc;
-		j["EnemyHoldPowerSub"] = e.EnemyHoldPowerSub;
-		j["FeelTheHeatChargeMulti"] = e.FeelTheHeatChargeMulti;
+		j["ThrowEnemy"] = e.ThrowEnemy;
+		j["EnemyThrowResIncrease"] = e.EnemyThrowResIncrease;
+		j["EscapeEnemyGrab"] = e.EscapeEnemyGrab;
+		j["ChargeFeelTheHeat"] = e.ChargeFeelTheHeat;
 	}
 
 	void from_json(const json &j, Config &e) {
@@ -22,10 +22,10 @@ namespace config {
 		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
 		e.ForcePatch = jsonToBool(j.at("ForcePatch"), defaults.ForcePatch);
-		e.EnemyThrowResDiv = jsonToNumber<uint8_t>(j.at("EnemyThrowResDiv"), 1, defaults.EnemyThrowResDiv);
-		e.EnemyThrowResInc = jsonToNumber<uint8_t>(j.at("EnemyThrowResInc"), 0, defaults.EnemyThrowResInc);
-		e.EnemyHoldPowerSub = jsonToNumber<uint8_t>(j.at("EnemyHoldPowerSub"), 1, defaults.EnemyHoldPowerSub);
-		e.FeelTheHeatChargeMulti = jsonToNumber<uint8_t>(j.at("FeelTheHeatChargeMulti"), 1, defaults.FeelTheHeatChargeMulti);
+		e.ThrowEnemy = jsonToNumber<uint8_t>(j.at("ThrowEnemy"), 1, defaults.ThrowEnemy);
+		e.EnemyThrowResIncrease = jsonToNumber<uint8_t>(j.at("EnemyThrowResIncrease"), 0, defaults.EnemyThrowResIncrease);
+		e.EscapeEnemyGrab = jsonToNumber<uint8_t>(j.at("EscapeEnemyGrab"), 1, defaults.EscapeEnemyGrab);
+		e.ChargeFeelTheHeat = jsonToNumber<uint8_t>(j.at("ChargeFeelTheHeat"), 1, defaults.ChargeFeelTheHeat);
 		if (json test = e; test != j) {
 			// Check if the converted config values differ from those in the JSON file.
 			// If input JSON contained invalid values, we should overwrite the config file.

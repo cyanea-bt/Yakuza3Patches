@@ -25,8 +25,8 @@ namespace EasySpam {
 		}
 
 		int32_t newChargeAmount = 32000; // just need some sensible upper limit (MAX Heat in Chapter 1 seems to be 8000)
-		if ((oldChargeAmount * CONFIG.FeelTheHeatChargeMulti) < newChargeAmount) {
-			newChargeAmount = oldChargeAmount * CONFIG.FeelTheHeatChargeMulti;
+		if ((oldChargeAmount * CONFIG.ChargeFeelTheHeat) < newChargeAmount) {
+			newChargeAmount = oldChargeAmount * CONFIG.ChargeFeelTheHeat;
 		}
 		/*
 		* As far as I can tell - result should always be == 1, unless:
@@ -37,7 +37,7 @@ namespace EasySpam {
 
 		if (isDEBUG) {
 			utils::Log(format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
-				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, CONFIG.FeelTheHeatChargeMulti, newChargeAmount, result), 4);
+				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result), 4);
 		}
 
 		return result;
@@ -45,13 +45,13 @@ namespace EasySpam {
 
 	static uint8_t PatchedDecHoldPower(uint8_t oldHoldPower) {
 		uint8_t newHoldPower = 0;
-		if (oldHoldPower > CONFIG.EnemyHoldPowerSub) {
-			newHoldPower = oldHoldPower - CONFIG.EnemyHoldPowerSub;
+		if (oldHoldPower > CONFIG.EscapeEnemyGrab) {
+			newHoldPower = oldHoldPower - CONFIG.EscapeEnemyGrab;
 		}
 
 		if (isDEBUG) {
 			utils::Log(format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
-				utils::TzString_ms(), dbg_Counter3++, oldHoldPower, CONFIG.EnemyHoldPowerSub, newHoldPower), 3);
+				utils::TzString_ms(), dbg_Counter3++, oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower), 3);
 		}
 
 		return newHoldPower;
@@ -59,13 +59,13 @@ namespace EasySpam {
 
 	static uint8_t PatchedIncThrowResistance(uint8_t oldThrowRes) {
 		uint8_t newThrowRes = UINT8_MAX;
-		if (oldThrowRes + CONFIG.EnemyThrowResInc < newThrowRes) {
-			newThrowRes = oldThrowRes + CONFIG.EnemyThrowResInc;
+		if (oldThrowRes + CONFIG.EnemyThrowResIncrease < newThrowRes) {
+			newThrowRes = oldThrowRes + CONFIG.EnemyThrowResIncrease;
 		}
 
 		if (isDEBUG) {
 			utils::Log(format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
-				utils::TzString_ms(), dbg_Counter2++, oldThrowRes, CONFIG.EnemyThrowResInc, newThrowRes), 2);
+				utils::TzString_ms(), dbg_Counter2++, oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes), 2);
 		}
 
 		return newThrowRes;
@@ -84,7 +84,7 @@ namespace EasySpam {
 		}
 
 		const uint8_t origThrowRes = orig(param1);
-		uint8_t easyThrowRes = origThrowRes / CONFIG.EnemyThrowResDiv;
+		uint8_t easyThrowRes = origThrowRes / CONFIG.ThrowEnemy;
 		if (easyThrowRes == 0) {
 			// 0 and 1 will do the same, since the player's keypress counter is incremented to 1 before this function is called the first time.
 			// Only reason I'm forcing easyThrowRes to 1 here, is to be on the safe side if this is ever called by another function that I'm not aware of.
@@ -94,7 +94,7 @@ namespace EasySpam {
 
 		if (isDEBUG) {
 			utils::Log(format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - EnemyThrowResDiv: {:d} - easyThrowRes: {:d}", 
-				utils::TzString_ms(), dbg_Counter1++, origThrowRes, CONFIG.EnemyThrowResDiv, easyThrowRes), 1);
+				utils::TzString_ms(), dbg_Counter1++, origThrowRes, CONFIG.ThrowEnemy, easyThrowRes), 1);
 		}
 
 		return easyThrowRes;
