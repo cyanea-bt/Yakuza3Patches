@@ -761,9 +761,7 @@ void OnInitializeHook()
 
 	// log current time to file to get some feedback once hook is done
 	utils::Log("Hook done!");
-	if (isDEBUG) {
-		utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
-	}
+	utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
 	utils::Log(format("Local: {:s}", utils::TzString()));
 	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);
 }

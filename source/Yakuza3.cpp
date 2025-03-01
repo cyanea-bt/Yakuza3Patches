@@ -45,9 +45,7 @@ namespace Yakuza3 {
 			else {
 				utils::Log(format("{:s} was disabled!", rsc_Name));
 			}
-			if (isDEBUG) {
-				utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
-			}
+			utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
 			utils::Log(format("Local: {:s}", utils::TzString()));
 			utils::Log(format("UTC:   {:s}", utils::UTCString()));
 			return false;
