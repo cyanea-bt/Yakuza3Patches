@@ -8,16 +8,8 @@
 #include "ModUtils/MemoryMgr.h"
 #include "ModUtils/Trampoline.h"
 #include "ModUtils/Patterns.h"
-#include "config.h"
 #include "utils.h"
 #include "Yakuza3.h"
-
-#if _DEBUG
-static constexpr bool s_Debug = true;
-#else
-static constexpr bool s_Debug = false;
-#endif // _DEBUG
-static config::Config s_Config;
 
 
 namespace EasySpam {
@@ -38,8 +30,8 @@ namespace EasySpam {
 		const AddHeatType addHeat = (AddHeatType)pAddHeat;
 
 		int32_t newChargeAmount = 32000; // just need some sensible upper limit (MAX Heat in Chapter 1 seems to be 8000)
-		if ((oldChargeAmount * s_Config.FeelTheHeatChargeMulti) < newChargeAmount) {
-			newChargeAmount = oldChargeAmount * s_Config.FeelTheHeatChargeMulti;
+		if ((oldChargeAmount * CONFIG.FeelTheHeatChargeMulti) < newChargeAmount) {
+			newChargeAmount = oldChargeAmount * CONFIG.FeelTheHeatChargeMulti;
 		}
 		/*
 		* As far as I can tell - result should always be == 1, unless:
@@ -48,12 +40,12 @@ namespace EasySpam {
 		*/
 		const uint8_t result = addHeat(param1, newChargeAmount);
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			if (addHeat != addHeatFunc) {
 				DebugBreak(); // verify we're calling the correct function
 			}
 			utils::Log(format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
-				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, s_Config.FeelTheHeatChargeMulti, newChargeAmount, result), 4);
+				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, CONFIG.FeelTheHeatChargeMulti, newChargeAmount, result), 4);
 		}
 
 		return result;
@@ -61,13 +53,13 @@ namespace EasySpam {
 
 	static uint8_t PatchedDecHoldPower(uint8_t oldHoldPower) {
 		uint8_t newHoldPower = 0;
-		if (oldHoldPower > s_Config.EnemyHoldPowerSub) {
-			newHoldPower = oldHoldPower - s_Config.EnemyHoldPowerSub;
+		if (oldHoldPower > CONFIG.EnemyHoldPowerSub) {
+			newHoldPower = oldHoldPower - CONFIG.EnemyHoldPowerSub;
 		}
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			utils::Log(format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
-				utils::TzString_ms(), dbg_Counter3++, oldHoldPower, s_Config.EnemyHoldPowerSub, newHoldPower), 3);
+				utils::TzString_ms(), dbg_Counter3++, oldHoldPower, CONFIG.EnemyHoldPowerSub, newHoldPower), 3);
 		}
 
 		return newHoldPower;
@@ -75,13 +67,13 @@ namespace EasySpam {
 
 	static uint8_t PatchedIncThrowResistance(uint8_t oldThrowRes) {
 		uint8_t newThrowRes = UINT8_MAX;
-		if (oldThrowRes + s_Config.EnemyThrowResInc < newThrowRes) {
-			newThrowRes = oldThrowRes + s_Config.EnemyThrowResInc;
+		if (oldThrowRes + CONFIG.EnemyThrowResInc < newThrowRes) {
+			newThrowRes = oldThrowRes + CONFIG.EnemyThrowResInc;
 		}
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			utils::Log(format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
-				utils::TzString_ms(), dbg_Counter2++, oldThrowRes, s_Config.EnemyThrowResInc, newThrowRes), 2);
+				utils::TzString_ms(), dbg_Counter2++, oldThrowRes, CONFIG.EnemyThrowResInc, newThrowRes), 2);
 		}
 
 		return newThrowRes;
@@ -95,7 +87,7 @@ namespace EasySpam {
 		const GetEnemyThrowResistanceType orig = (GetEnemyThrowResistanceType)pGetEnemyThrowResistance;
 
 		const uint8_t origThrowRes = orig(param1);
-		uint8_t easyThrowRes = origThrowRes / s_Config.EnemyThrowResDiv;
+		uint8_t easyThrowRes = origThrowRes / CONFIG.EnemyThrowResDiv;
 		if (easyThrowRes == 0) {
 			// 0 and 1 will do the same, since the player's keypress counter is incremented to 1 before this function is called the first time.
 			// Only reason I'm forcing easyThrowRes to 1 here, is to be on the safe side if this is ever called by another function that I'm not aware of.
@@ -103,12 +95,12 @@ namespace EasySpam {
 			easyThrowRes++;
 		}
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			if (orig != enemyThrowResFunc) {
 				DebugBreak(); // verify we're calling the correct function
 			}
 			utils::Log(format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - EnemyThrowResDiv: {:d} - easyThrowRes: {:d}", 
-				utils::TzString_ms(), dbg_Counter1++, origThrowRes, s_Config.EnemyThrowResDiv, easyThrowRes), 1);
+				utils::TzString_ms(), dbg_Counter1++, origThrowRes, CONFIG.EnemyThrowResDiv, easyThrowRes), 1);
 		}
 
 		return easyThrowRes;
@@ -123,10 +115,9 @@ void OnInitializeHook()
 	using namespace hook;
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
-	s_Config = config::GetConfig();
 
 	// Check if patch should be disabled
-	if (Yakuza3::ShouldDisablePatch()) {
+	if (!Yakuza3::Init()) {
 		return;
 	}
 
@@ -142,7 +133,7 @@ void OnInitializeHook()
 	{
 		using namespace EasySpam;
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			// Open debug logfile streams (not necessary but will save some time on the first real log message)
 			utils::Log("", 1);
 			utils::Log("", 2);
@@ -364,8 +355,8 @@ void OnInitializeHook()
 
 	// log current time to file to get some feedback once hook is done
 	utils::Log("Hook done!");
-	if (s_Debug) {
-		utils::Log(format("\nConfig path: \"{:s}\"", s_Config.path));
+	if (isDEBUG) {
+		utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
 	}
 	utils::Log(format("Local: {:s}", utils::TzString()));
 	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);

@@ -8,24 +8,19 @@
 #include "ModUtils/MemoryMgr.h"
 #include "ModUtils/Trampoline.h"
 #include "ModUtils/Patterns.h"
-#include "config.h"
 #include "utils.h"
 #include "Yakuza3.h"
 
-#if _DEBUG
-static constexpr bool s_Debug = true;
-#else
-static constexpr bool s_Debug = false;
-#endif // _DEBUG
 
+config::Config CONFIG;
 
 namespace Yakuza3 {
 	using namespace std;
 	using namespace hook;
 	using namespace Memory;
 
-	bool ShouldDisablePatch() {
-		const auto conf = config::GetConfig();
+	bool Init() {
+		CONFIG = config::GetConfig();
 
 		// Game detection taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396
 		enum class Game
@@ -44,7 +39,7 @@ namespace Yakuza3 {
 
 				const char *windowName;
 				ReadOffsetValue(match, windowName);
-				game = windowName == std::string_view("Yakuza 4") ? Game::Yakuza4 : Game::Yakuza3;
+				game = windowName == string_view("Yakuza 4") ? Game::Yakuza4 : Game::Yakuza3;
 			}
 			else
 			{
@@ -55,20 +50,20 @@ namespace Yakuza3 {
 		}
 
 		// Check if patch should be disabled
-		if ((game != Game::Yakuza3 && !conf.ForcePatch) || !conf.EnablePatch) {
+		if ((game != Game::Yakuza3 && !CONFIG.ForcePatch) || !CONFIG.EnablePatch) {
 			if (game != Game::Yakuza3) {
 				utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
 			}
 			else {
 				utils::Log(format("{:s} was disabled!", rsc_Name));
 			}
-			if (s_Debug) {
-				utils::Log(format("\nConfig path: \"{:s}\"", conf.path));
+			if (isDEBUG) {
+				utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
 			}
 			utils::Log(format("Local: {:s}", utils::TzString()));
 			utils::Log(format("UTC:   {:s}", utils::UTCString()));
-			return true;
+			return false;
 		}
-		return false;
+		return true;
 	}
 }

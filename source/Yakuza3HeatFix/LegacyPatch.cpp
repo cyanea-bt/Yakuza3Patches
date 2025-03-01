@@ -8,17 +8,9 @@
 #include "ModUtils/MemoryMgr.h"
 #include "ModUtils/Trampoline.h"
 #include "ModUtils/Patterns.h"
-#include "config.h"
 #include "utils.h"
 #include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
-
-#if _DEBUG
-static constexpr bool s_Debug = true;
-#else
-static constexpr bool s_Debug = false;
-#endif // _DEBUG
-static config::Config s_Config;
 
 
 namespace LegacyHeatFix {
@@ -101,7 +93,7 @@ namespace LegacyHeatFix {
 		// CMP word ptr [RBX + 0x1ac0],SI
 		const uint16_t blockedDamage = *(uint16_t *)(param1 + 0x1ac0);
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			if (origHeatFunc != verifyHeatFunc || verifyHeatFunc == nullptr) {
 				DebugBreak();
 				utils::Log("");
@@ -144,7 +136,7 @@ namespace LegacyHeatFix {
 			return; // UpdateHeat() will return immediately in this case, so we just skip calling it
 		}
 		else if (counter == 1 && (IsCombatInactive() || isCombatPausedByTutorial || IsActorDead(param1) || isCombatInTransition || isCombatFinished)) {
-			if (s_Debug) {
+			if (isDEBUG) {
 				utils::Log(format("Fast UpdateHeat: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
 			}
 			// UpdateHeat() won't change the Heat value in these cases, but will still execute some code.
@@ -201,7 +193,6 @@ namespace LegacyHeatFix {
 		using namespace std;
 		using namespace Memory;
 		using namespace hook;
-		s_Config = config::GetConfig();
 
 		/*
 		* Hook/Redirect the game's UpdateHeat function to our own function.
@@ -213,7 +204,7 @@ namespace LegacyHeatFix {
 		* 2a55a4b13674d4e62cda2ff86bc365d41b645a92 Yakuza3.exe (Steam without SteamStub)
 		* 6c688b51650fa2e9be39e1d934e872602ee54799 Yakuza3.exe (GOG)
 		*/
-		if (s_Debug) {
+		if (isDEBUG) {
 			// Open debug logfile streams (not necessary but will save some time on the first real log message)
 			utils::Log("", 1);
 			utils::Log("", 2);

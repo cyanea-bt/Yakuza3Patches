@@ -8,17 +8,9 @@
 #include "ModUtils/MemoryMgr.h"
 #include "ModUtils/Trampoline.h"
 #include "ModUtils/Patterns.h"
-#include "config.h"
 #include "utils.h"
 #include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
-
-#if _DEBUG
-static constexpr bool s_Debug = true;
-#else
-static constexpr bool s_Debug = false;
-#endif // _DEBUG
-static config::Config s_Config;
 
 
 namespace HeatFix {
@@ -40,7 +32,7 @@ namespace HeatFix {
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
 		GetActorFloatType getCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			if (getCurHeat != verifyGetCurHeat || verifyGetCurHeat == nullptr) {
 				DebugBreak(); // should never happen
 				utils::Log("");
@@ -48,7 +40,7 @@ namespace HeatFix {
 		}
 		const float curHeat = getCurHeat(playerActor);
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getCurHeat: {:p} - curHeat: {:f}",
 				"GetCurrentHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getCurHeat, curHeat), 1);
 		}
@@ -61,7 +53,7 @@ namespace HeatFix {
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
 		GetActorFloatType getMaxHeat = (GetActorFloatType)vfTable[0x340 / sizeof(uintptr_t)];
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			if (getMaxHeat != verifyGetMaxHeat || verifyGetMaxHeat == nullptr) {
 				DebugBreak(); // should never happen
 				utils::Log("");
@@ -69,7 +61,7 @@ namespace HeatFix {
 		}
 		const float maxHeat = getMaxHeat(playerActor);
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - getMaxHeat: {:p} - maxHeat: {:f}",
 				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)getMaxHeat, maxHeat), 2);
 		}
@@ -82,7 +74,7 @@ namespace HeatFix {
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
 		GetActorBoolType IsDrunk = (GetActorBoolType)vfTable[0x290 / sizeof(uintptr_t)];
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			if (IsDrunk != verifyIsPlayerDrunk || verifyIsPlayerDrunk == nullptr) {
 				DebugBreak(); // should never happen
 				utils::Log("");
@@ -92,7 +84,7 @@ namespace HeatFix {
 	}
 
 	static bool PatchedIsPlayerDrunk(void **playerActor, const float newHeatVal, const uint16_t newDrainTimer) {
-		if (s_Debug) {
+		if (isDEBUG) {
 			// movzx eax,word ptr [param_1 + 0x1abc]
 			const uint16_t incomingDamage = *(uint16_t *)((uintptr_t)playerActor + 0x1abc);
 
@@ -121,7 +113,7 @@ namespace HeatFix {
 	static char* PatchedGetDisplayString(void *param1, uint32_t param2, uint32_t param3) {
 		char *retVal = origGetDisplayString(param1, param2, param3);
 		const string str(retVal);
-		if (s_Debug) {
+		if (isDEBUG) {
 			utils::Log(format(
 				"{:s} - {:d} - TzNow: {:s} - param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
 				"PatchedGetDisplayString", dbg_Counter7++, utils::TzString_ms(), param1, param2, param3, (void *)retVal, str), 7
@@ -137,10 +129,10 @@ namespace HeatFix {
 
 	static uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t curDrainTimer) {
 		uint16_t newDrainTimer;
-		const uint16_t MAX_SubstituteTimer = (s_Config.DrainTimeMulti * 2 - 2); // -2 because timer starts at 0
+		const uint16_t MAX_SubstituteTimer = (CONFIG.DrainTimeMulti * 2 - 2); // -2 because timer starts at 0
 		uint8_t oldDrainTimeLimiter; // for logging purposes
 		uint16_t oldSubstituteTimer; // for logging purposes
-		if (s_Debug) {
+		if (isDEBUG) {
 			oldDrainTimeLimiter = drainTimeLimiter;
 			oldSubstituteTimer = substituteTimer;
 
@@ -152,7 +144,7 @@ namespace HeatFix {
 			}
 		}
 
-		if (s_Config.DisableHeatDrain) {
+		if (CONFIG.DisableHeatDrain) {
 			newDrainTimer = 0; // Heat will never drain on its own
 		}
 		else if (curDrainTimer != lastDrainTimer || curDrainTimer == 0) {
@@ -164,7 +156,7 @@ namespace HeatFix {
 			// or if it was reset to 0 externally. (Which could lead to starting Heat drain too early)
 			newDrainTimer = 1;
 
-			if (s_Debug) {
+			if (isDEBUG) {
 				if (curDrainTimer != 0) {
 					DebugBreak(); // should never happen
 					utils::Log("");
@@ -184,7 +176,7 @@ namespace HeatFix {
 				substituteTimer++;
 			}
 
-			if (s_Debug) {
+			if (isDEBUG) {
 				if (substituteTimer > MAX_SubstituteTimer || drainTimeLimiter != 1) {
 					DebugBreak(); // should never happen
 					utils::Log("");
@@ -192,7 +184,7 @@ namespace HeatFix {
 			}
 		}
 		else {
-			if (s_Debug) {
+			if (isDEBUG) {
 				if (substituteTimer != MAX_SubstituteTimer || substituteTimer == 0) {
 					DebugBreak(); // should never happen
 					utils::Log("");
@@ -201,7 +193,7 @@ namespace HeatFix {
 
 			// Increase drain timer every (drainTimeMulti) frames
 			newDrainTimer = curDrainTimer;
-			if (drainTimeLimiter == s_Config.DrainTimeMulti) {
+			if (drainTimeLimiter == CONFIG.DrainTimeMulti) {
 				drainTimeLimiter = 1;
 				if (newDrainTimer < MAX_DrainTimer) {
 					newDrainTimer++;
@@ -211,18 +203,18 @@ namespace HeatFix {
 				drainTimeLimiter++;
 			}
 
-			if (s_Debug) {
-				if (drainTimeLimiter > s_Config.DrainTimeMulti || newDrainTimer > MAX_DrainTimer) {
+			if (isDEBUG) {
+				if (drainTimeLimiter > CONFIG.DrainTimeMulti || newDrainTimer > MAX_DrainTimer) {
 					DebugBreak(); // should never happen
 					utils::Log("");
 				}
 			}
 		}
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			utils::Log(format(
 				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
-				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, s_Config.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
+				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
 			);
 		}
 		lastDrainTimer = newDrainTimer;
@@ -257,7 +249,7 @@ namespace HeatFix {
 		float retHeatVal = newHeatVal;
 		if (newHeatVal < oldHeatVal) {
 			if (incomingDamage == 0) {
-				if (s_Debug) {
+				if (isDEBUG) {
 					if (newDrainTimer != MAX_DrainTimer || baseDrainRate == 0.0f) {
 						DebugBreak(); // should never happen
 						utils::Log("");
@@ -275,7 +267,7 @@ namespace HeatFix {
 			}
 		}
 
-		if (s_Debug) {
+		if (isDEBUG) {
 			const bool isDrunk = IsPlayerDrunk(playerActor);
 			// MOV RBX,dword ptr [param_1 + 0x1a3c]
 			const uint32_t playerStatus = *(uint32_t *)((uintptr_t)playerActor + 0x1a3c);
@@ -397,21 +389,20 @@ void OnInitializeHook()
 	using namespace hook;
 
 	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
-	s_Config = config::GetConfig();
 
 	// Check if patch should be disabled
-	if (Yakuza3::ShouldDisablePatch()) {
+	if (!Yakuza3::Init()) {
 		return;
 	}
 
-	if (s_Config.UseOldPatch) {
+	if (CONFIG.UseOldPatch) {
 		LegacyHeatFix::InitPatch();
 	}
 	else {
 		{
 			using namespace HeatFix;
 
-			if (s_Debug) {
+			if (isDEBUG) {
 				// Open debug logfile streams (not necessary but will save some time on the first real log message)
 				utils::Log("", 1);
 				utils::Log("", 2);
@@ -766,8 +757,8 @@ void OnInitializeHook()
 
 	// log current time to file to get some feedback once hook is done
 	utils::Log("Hook done!");
-	if (s_Debug) {
-		utils::Log(format("\nConfig path: \"{:s}\"", s_Config.path));
+	if (isDEBUG) {
+		utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
 	}
 	utils::Log(format("Local: {:s}", utils::TzString()));
 	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);
