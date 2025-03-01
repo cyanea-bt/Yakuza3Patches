@@ -1,13 +1,3 @@
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-
-#define WINVER 0x0601
-#define _WIN32_WINNT 0x0601
-
-#include <format>
-#include "ModUtils/MemoryMgr.h"
-#include "ModUtils/Trampoline.h"
-#include "ModUtils/Patterns.h"
 #include "utils.h"
 #include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
