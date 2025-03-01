@@ -10,7 +10,7 @@ namespace config {
 		j = json();
 		j["Version"] = e.Version;
 		j["EnablePatch"] = e.EnablePatch;
-		j["ForcePatch"] = e.ForcePatch;
+		j["IgnoreGameCheck"] = e.IgnoreGameCheck;
 		j["ShowHeatValues"] = e.ShowHeatValues;
 		j["UseOldPatch"] = e.UseOldPatch;
 		j["DrainTimeMulti"] = e.DrainTimeMulti;
@@ -21,7 +21,7 @@ namespace config {
 		const Config defaults = Config();
 		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
-		e.ForcePatch = jsonToBool(j.at("ForcePatch"), defaults.ForcePatch);
+		e.IgnoreGameCheck = jsonToBool(j.at("IgnoreGameCheck"), defaults.IgnoreGameCheck);
 		e.ShowHeatValues = jsonToBool(j.at("ShowHeatValues"), defaults.ShowHeatValues);
 		e.UseOldPatch = jsonToBool(j.at("UseOldPatch"), defaults.UseOldPatch);
 		e.DrainTimeMulti = jsonToNumber<uint8_t>(j.at("DrainTimeMulti"), 1, defaults.DrainTimeMulti);

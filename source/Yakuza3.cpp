@@ -38,7 +38,7 @@ namespace Yakuza3 {
 		}
 
 		// Check if patch should be disabled
-		if ((game != Game::Yakuza3 && !CONFIG.ForcePatch) || !CONFIG.EnablePatch) {
+		if ((game != Game::Yakuza3 && !CONFIG.IgnoreGameCheck) || !CONFIG.EnablePatch) {
 			if (game != Game::Yakuza3) {
 				utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
 			}

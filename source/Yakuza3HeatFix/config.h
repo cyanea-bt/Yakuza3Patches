@@ -10,7 +10,7 @@ namespace config {
 		bool SaveRequired = false;
 		uint32_t Version = 1;
 		bool EnablePatch = true;
-		bool ForcePatch = false;
+		bool IgnoreGameCheck = false;
 		bool ShowHeatValues = false;
 		bool UseOldPatch = false;
 		uint8_t DrainTimeMulti = 2; // valid range: 1-255

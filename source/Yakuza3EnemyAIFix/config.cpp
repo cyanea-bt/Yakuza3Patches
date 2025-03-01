@@ -10,14 +10,14 @@ namespace config {
 		j = json();
 		j["Version"] = e.Version;
 		j["EnablePatch"] = e.EnablePatch;
-		j["ForcePatch"] = e.ForcePatch;
+		j["IgnoreGameCheck"] = e.IgnoreGameCheck;
 	}
 
 	void from_json(const json &j, Config &e) {
 		const Config defaults = Config();
 		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
-		e.ForcePatch = jsonToBool(j.at("ForcePatch"), defaults.ForcePatch);
+		e.IgnoreGameCheck = jsonToBool(j.at("IgnoreGameCheck"), defaults.IgnoreGameCheck);
 		if (json test = e; test != j) {
 			// Check if the converted config values differ from those in the JSON file.
 			// If input JSON contained invalid values, we should overwrite the config file.

@@ -10,7 +10,7 @@ namespace config {
 		bool SaveRequired = false;
 		uint32_t Version = 1;
 		bool EnablePatch = true;
-		bool ForcePatch = false;
+		bool IgnoreGameCheck = false;
 	};
 
 	void to_json(json &j, const Config &e);
