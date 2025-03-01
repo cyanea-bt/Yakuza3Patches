@@ -1,3 +1,6 @@
 [submodule "source/Utils"]
 	path = source/ModUtils
 	url = https://github.com/CookiePLMonster/ModUtils.git
+[submodule "source/json"]
+	path = source/json
+	url = https://github.com/nlohmann/json.git

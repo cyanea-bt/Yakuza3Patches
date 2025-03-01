@@ -51,9 +51,10 @@ workspace "*"
 		["Resources"] = "source/**.rc"
 	}
 
-	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.cpp", "**/Patterns.h", "**/HookInit.hpp", "**/json.hpp", "**/json_fwd.hpp" }
+	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.cpp", "**/Patterns.h", "**/HookInit.hpp" }
 	files { "source/*.h", "source/*.cpp", "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/resources/*.rc" }
 	includedirs { "source", "source/%{prj.name}" }
+	externalincludedirs { "source/json/include" }
 
 	-- Disable exceptions in WIL
 	defines { "WIL_SUPPRESS_EXCEPTIONS" }
