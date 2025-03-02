@@ -19,6 +19,8 @@
 #pragma diag_default 1574, 2500
 #endif
 #pragma warning(pop)
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 // I kinda hate this but I couldn't find a better solution
 // ref: https://stackoverflow.com/a/73512139

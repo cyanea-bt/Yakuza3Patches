@@ -40,6 +40,8 @@ namespace utils {
 	static map<int, ofstream> logfileMap;
 	static bool logFailed = false;
 
+	static shared_ptr<spdlog::logger> basicLogger;
+
 	void Log(string_view msg, const int channel) {
 		string filename;
 		if (!logfileMap.contains(channel)) {
@@ -72,6 +74,11 @@ namespace utils {
 		}
 		if (!msg.empty() && !logFailed) {
 			logfileMap[channel] << msg << endl;
+			if (basicLogger == nullptr) {
+				basicLogger = spdlog::basic_logger_st("basic_logger", fmt::format("{:s}_SPD.txt", rsc_Name));
+			}
+			basicLogger->info(msg);
+			basicLogger->flush();
 		}
 	}
 

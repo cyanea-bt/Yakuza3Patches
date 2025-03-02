@@ -7,3 +7,6 @@
 [submodule "source/fmt"]
 	path = source/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "source/spdlog"]
+	path = source/spdlog
+	url = https://github.com/gabime/spdlog.git
