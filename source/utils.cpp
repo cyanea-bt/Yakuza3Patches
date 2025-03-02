@@ -9,28 +9,28 @@ namespace utils {
 	using namespace std::chrono;
 
 	static const auto tz = current_zone();
-	static constexpr string_view tzFmt("{:%Y/%m/%d %H:%M:%S}");
+	static constexpr auto tzFmt = FMT_COMPILE("{:%Y/%m/%d %H:%M:%S}");
 
 	string UTCString() {
 		const auto utcNow = system_clock::now();
-		return format(tzFmt, floor<seconds>(utcNow));
+		return fmt::format(tzFmt, floor<seconds>(utcNow));
 	}
 
 	string UTCString_ms() {
 		const auto utcNow = system_clock::now();
-		return format(tzFmt, utcNow);
+		return fmt::format(tzFmt, utcNow);
 	}
 
 	string TzString() {
 		const auto utcNow = system_clock::now();
 		const auto tzNow = tz->to_local(utcNow);
-		return format(tzFmt, floor<seconds>(tzNow));
+		return fmt::format(tzFmt, floor<seconds>(tzNow));
 	}
 
 	string TzString_ms() {
 		const auto utcNow = system_clock::now();
 		const auto tzNow = tz->to_local(utcNow);
-		return format(tzFmt, tzNow);
+		return fmt::format(tzFmt, tzNow);
 	}
 
 	//
@@ -45,10 +45,10 @@ namespace utils {
 		if (!logfileMap.contains(channel)) {
 			if (!logFailed) {
 				if (channel == -1) {
-					filename = format("{:s}.txt", rsc_Name);
+					filename = fmt::format("{:s}.txt", rsc_Name);
 				}
 				else {
-					filename = format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
+					filename = fmt::format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
 				}
 				logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::trunc);
 				if (!logfileMap[channel].is_open()) {
@@ -59,10 +59,10 @@ namespace utils {
 		else {
 			if ((!logfileMap[channel].is_open() && !logFailed)) {
 				if (channel == -1) {
-					filename = format("{:s}.txt", rsc_Name);
+					filename = fmt::format("{:s}.txt", rsc_Name);
 				}
 				else {
-					filename = format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
+					filename = fmt::format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
 				}
 				logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::app);
 				if (!logfileMap[channel].is_open()) {

@@ -40,14 +40,14 @@ namespace Yakuza3 {
 		// Check if patch should be disabled
 		if ((game != Game::Yakuza3 && !CONFIG.IgnoreGameCheck) || !CONFIG.EnablePatch) {
 			if (game != Game::Yakuza3) {
-				utils::Log(format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
+				utils::Log(fmt::format("Game is NOT {:s}, {:s} was disabled!", "Yakuza 3", rsc_Name));
 			}
 			else {
-				utils::Log(format("{:s} was disabled!", rsc_Name));
+				utils::Log(fmt::format("{:s} was disabled!", rsc_Name));
 			}
-			utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
-			utils::Log(format("Local: {:s}", utils::TzString()));
-			utils::Log(format("UTC:   {:s}", utils::UTCString()));
+			utils::Log(fmt::format("\nConfig path: \"{:s}\"", CONFIG.path));
+			utils::Log(fmt::format("Local: {:s}", utils::TzString()));
+			utils::Log(fmt::format("UTC:   {:s}", utils::UTCString()));
 			return false;
 		}
 		return true;

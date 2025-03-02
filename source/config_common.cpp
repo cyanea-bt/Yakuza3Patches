@@ -66,11 +66,11 @@ namespace config {
 
 	void saveConfig(const fs::path configPath, const Config newConfig) {
 		if (fs::exists(configPath)) {
-			const fs::path defaultBakPath(format("{:s}{:s}", configPath.string(), ".bak"));
+			const fs::path defaultBakPath(fmt::format("{:s}{:s}", configPath.string(), ".bak"));
 			fs::path bakPath(defaultBakPath);
 			int bakCounter = 1;
 			while (fs::exists(bakPath)) {
-				bakPath = fs::path(format("{:s}{:d}", defaultBakPath.string(), bakCounter++));
+				bakPath = fs::path(fmt::format("{:s}{:d}", defaultBakPath.string(), bakCounter++));
 			}
 			fs::rename(configPath, bakPath);
 		}
@@ -79,7 +79,7 @@ namespace config {
 	}
 
 	Config loadConfig() {
-		fs::path configPath(format("{:s}{:s}", rsc_Name, ".json"));
+		fs::path configPath(fmt::format("{:s}{:s}", rsc_Name, ".json"));
 		if (!fs::exists(configPath)) {
 			const fs::path asiDir = winutils::GetASIPath().parent_path();
 			configPath = fs::path(asiDir / configPath.filename());

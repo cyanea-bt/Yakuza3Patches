@@ -31,7 +31,7 @@ namespace HeatFix {
 		const float curHeat = GetCurHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:f}",
+			utils::Log(fmt::format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:f}",
 				"GetCurrentHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat), 1);
 		}
 		return curHeat;
@@ -52,7 +52,7 @@ namespace HeatFix {
 		const float maxHeat = GetMaxHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:f}",
+			utils::Log(fmt::format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:f}",
 				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat), 2);
 		}
 		return maxHeat;
@@ -86,7 +86,7 @@ namespace HeatFix {
 				utils::Log("");
 			}
 
-			utils::Log(format(
+			utils::Log(fmt::format(
 				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - newDrainTimer: {:d} - incomingDamage: {:d}",
 				"PatchedIsPlayerDrunk", dbg_Counter6++, utils::TzString_ms(), (void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
 			);
@@ -104,7 +104,7 @@ namespace HeatFix {
 		char *retVal = origGetDisplayString(param1, param2, param3);
 		const string str(retVal);
 		if (isDEBUG) {
-			utils::Log(format(
+			utils::Log(fmt::format(
 				"{:s} - {:d} - TzNow: {:s} - param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
 				"PatchedGetDisplayString", dbg_Counter7++, utils::TzString_ms(), param1, param2, param3, (void *)retVal, str), 7
 			);
@@ -120,7 +120,7 @@ namespace HeatFix {
 			GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
 			const float heatValue = GetCurHeat(PlayerActor);
 
-			replaceStr = format("Timer (drain starts at 115): {:03d} ; Current Heat: {:08.2f}", heatDrainTimer, heatValue);
+			replaceStr = fmt::cformat("Timer (drain starts at 115): {:03d} ; Current Heat: {:08.2f}", heatDrainTimer, heatValue);
 			retVal = replaceStr.data();
 		}
 		return retVal;
@@ -212,7 +212,7 @@ namespace HeatFix {
 		}
 
 		if (isDEBUG) {
-			utils::Log(format(
+			utils::Log(fmt::format(
 				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
 				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
 			);
@@ -351,7 +351,7 @@ namespace HeatFix {
 			}
 			const bool playerGotKnockedDown = (playerStatus == 4) && (unkUInt1 == 0x3) && (unkUInt2 <= 0x3c);
 			if (playerStatus == 4) {
-				utils::Log(format(
+				utils::Log(fmt::format(
 					"{:s} - {:d} - TzNow: {:s} - heatDiff: {:f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
 					"GetNewHeatValue", dbg_Counter4++, utils::TzString_ms(), heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 4
 				);
@@ -376,7 +376,7 @@ namespace HeatFix {
  				utils::Log("");
 			}
 
-			utils::Log(format(
+			utils::Log(fmt::format(
 				"{:s} - {:d} - TzNow: {:s} - oldHeatVal: {:f} - newHeatVal: {:f} - heatDiff: {:f} - retHeatVal: {:f} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
 				"GetNewHeatValue", dbg_Counter5++, utils::TzString_ms(), oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer), 5
 			);
@@ -767,7 +767,7 @@ void OnInitializeHook()
 
 	// log current time to file to get some feedback once hook is done
 	utils::Log("Hook done!");
-	utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
-	utils::Log(format("Local: {:s}", utils::TzString()));
-	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);
+	utils::Log(fmt::format("\nConfig path: \"{:s}\"", CONFIG.path));
+	utils::Log(fmt::format("Local: {:s}", utils::TzString()));
+	utils::Log(fmt::format("UTC:   {:s}", utils::UTCString()), true);
 }

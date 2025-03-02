@@ -4,3 +4,6 @@
 [submodule "source/json"]
 	path = source/json
 	url = https://github.com/nlohmann/json.git
+[submodule "source/fmt"]
+	path = source/fmt
+	url = https://github.com/fmtlib/fmt.git

@@ -36,7 +36,7 @@ namespace EasySpam {
 		const uint8_t result = addHeat(param1, newChargeAmount);
 
 		if (isDEBUG) {
-			utils::Log(format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
+			utils::Log(fmt::format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
 				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result), 4);
 		}
 
@@ -50,7 +50,7 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
+			utils::Log(fmt::format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
 				utils::TzString_ms(), dbg_Counter3++, oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower), 3);
 		}
 
@@ -64,7 +64,7 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
+			utils::Log(fmt::format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
 				utils::TzString_ms(), dbg_Counter2++, oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes), 2);
 		}
 
@@ -93,7 +93,7 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - EnemyThrowResDiv: {:d} - easyThrowRes: {:d}", 
+			utils::Log(fmt::format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - EnemyThrowResDiv: {:d} - easyThrowRes: {:d}", 
 				utils::TzString_ms(), dbg_Counter1++, origThrowRes, CONFIG.ThrowEnemy, easyThrowRes), 1);
 		}
 
@@ -359,7 +359,7 @@ void OnInitializeHook()
 
 	// log current time to file to get some feedback once hook is done
 	utils::Log("Hook done!");
-	utils::Log(format("\nConfig path: \"{:s}\"", CONFIG.path));
-	utils::Log(format("Local: {:s}", utils::TzString()));
-	utils::Log(format("UTC:   {:s}", utils::UTCString()), true);
+	utils::Log(fmt::format("\nConfig path: \"{:s}\"", CONFIG.path));
+	utils::Log(fmt::format("Local: {:s}", utils::TzString()));
+	utils::Log(fmt::format("UTC:   {:s}", utils::UTCString()), true);
 }

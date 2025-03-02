@@ -54,14 +54,14 @@ workspace "*"
 	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.cpp", "**/Patterns.h", "**/HookInit.hpp" }
 	files { "source/*.h", "source/*.cpp", "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/resources/*.rc" }
 	includedirs { "source", "source/%{prj.name}" }
-	externalincludedirs { "source/json/include" }
+	externalincludedirs { "source/json/include", "source/fmt/include" }
 
 	-- Disable exceptions in WIL
 	defines { "WIL_SUPPRESS_EXCEPTIONS" }
 
 	cppdialect "C++20"
 	staticruntime "on"
-	buildoptions { "/sdl" }
+	buildoptions { "/sdl", "/utf-8" }
 	warnings "Extra"
 
 	-- Automated defines for resources

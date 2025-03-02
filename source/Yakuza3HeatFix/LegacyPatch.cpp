@@ -111,11 +111,11 @@ namespace LegacyHeatFix {
 				utils::Log(""); // Should have subtracted Heat on last frame but missed it due to 30fps cap on UpdateHeat
 			}
 
-			dbg_msg = format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
+			dbg_msg = fmt::format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
 				utils::TzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
-			utils::Log(format("PatchedHeatFunc: {:d} - {:s}", dbg_Counter1++, dbg_msg), 1);
+			utils::Log(fmt::format("PatchedHeatFunc: {:d} - {:s}", dbg_Counter1++, dbg_msg), 1);
 			if (counter % 2 == 0) {
-				utils::Log(format("OrigHeatFunc: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
+				utils::Log(fmt::format("OrigHeatFunc: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
 			}
 		}
 
@@ -125,7 +125,7 @@ namespace LegacyHeatFix {
 		}
 		else if (counter == 1 && (IsCombatInactive() || isCombatPausedByTutorial || IsActorDead(param1) || isCombatInTransition || isCombatFinished)) {
 			if (isDEBUG) {
-				utils::Log(format("Fast UpdateHeat: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
+				utils::Log(fmt::format("Fast UpdateHeat: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
 			}
 			// UpdateHeat() won't change the Heat value in these cases, but will still execute some code.
 			// Since I don't know how important that code is, we'll call UpdateHeat() immediately instead of waiting for the next frame/update.
