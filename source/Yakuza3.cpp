@@ -8,6 +8,29 @@ namespace Yakuza3 {
 	using namespace Memory;
 
 	bool Init() {
+		// Replace default spdlog logger
+		try {
+			const auto stdout_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+			stdout_sink->set_level(spdlog::level::info);
+			const auto msvc_sink = make_shared<spdlog::sinks::msvc_sink_mt>(); // MSVC debug sink
+			msvc_sink->set_level(spdlog::level::trace);
+			std::vector<spdlog::sink_ptr> sinks;
+			sinks.push_back(stdout_sink);
+			sinks.push_back(msvc_sink);
+			const auto combined_logger = std::make_shared<spdlog::logger>(rsc_Name, begin(sinks), end(sinks));
+			combined_logger->set_level(spdlog::level::trace);
+			combined_logger->flush_on(spdlog::level::trace); // always flush immediately, no matter the log level
+			spdlog::set_default_logger(combined_logger);
+		}
+		catch (const spdlog::spdlog_ex &ex)
+		{
+			(void)ex;
+			if (isDEBUG) {
+				DebugBreak(); // shouldn't happen
+				utils::Log("");
+			}
+		}
+		// Get config from file
 		CONFIG = config::GetConfig();
 
 		// Game detection taken from https://github.com/CookiePLMonster/SilentPatchYRC/blob/ae9201926134445f247be42c6f812dc945ad052b/source/SilentPatchYRC.cpp#L396

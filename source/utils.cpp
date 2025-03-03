@@ -37,10 +37,9 @@ namespace utils {
 	//
 	//
 
-	static map<int, ofstream> logfileMap;
-	static bool logFailed = false;
 
-	static shared_ptr<spdlog::logger> basicLogger;
+	static map<int, shared_ptr<spdlog::logger>> logfileMap;
+	static bool logFailed = false;
 
 	void Log(string_view msg, const int channel) {
 		string filename;
@@ -52,57 +51,57 @@ namespace utils {
 				else {
 					filename = fmt::format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
 				}
-				logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::trunc);
-				if (!logfileMap[channel].is_open()) {
-					logFailed = true; // Couldn't open file for writing, better not try again
+				spdlog::info("Creating logger: \"{:s}\"", filename); // for testing, will be removed
+				try {
+					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, true);
+					logfileMap[channel]->set_level(spdlog::level::debug);
+					logfileMap[channel]->flush_on(spdlog::level::debug);
+					// default (?) pattern: [%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v
+					// ref: https://github.com/gabime/spdlog/blob/3335c380a0/include/spdlog/pattern_formatter-inl.h#L835
+					logfileMap[channel]->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+				}
+				catch (const spdlog::spdlog_ex &ex)
+				{
+					spdlog::error(ex.what());
+					logFailed = true; // Log initialization failed
 				}
 			}
 		}
 		else {
-			if ((!logfileMap[channel].is_open() && !logFailed)) {
+			if ((logfileMap[channel] == nullptr && !logFailed)) {
 				if (channel == -1) {
 					filename = fmt::format("{:s}.txt", rsc_Name);
 				}
 				else {
 					filename = fmt::format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
 				}
-				logfileMap[channel] = ofstream(filename, ios::out | ios::binary | ios::app);
-				if (!logfileMap[channel].is_open()) {
-					logFailed = true; // Couldn't open file for writing, better not try again
+				spdlog::warn("Re-creating logger: \"{:s}\"", filename); // for testing, will be removed
+				try {
+					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, false);
+					logfileMap[channel]->set_level(spdlog::level::debug);
+					logfileMap[channel]->flush_on(spdlog::level::debug);
+					logfileMap[channel]->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+				}
+				catch (const spdlog::spdlog_ex &ex)
+				{
+					spdlog::error(ex.what());
+					logFailed = true; // Log initialization failed
 				}
 			}
 		}
 		if (!msg.empty() && !logFailed) {
-			logfileMap[channel] << msg << endl;
-			if (basicLogger == nullptr) {
-				basicLogger = spdlog::basic_logger_st("basic_logger", fmt::format("{:s}_SPD.txt", rsc_Name), true);
-				// default (?) pattern: [%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v
-				// ref: https://github.com/gabime/spdlog/blob/3335c380a0/include/spdlog/pattern_formatter-inl.h#L835
-				basicLogger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
-				spdlog::flush_on(spdlog::level::trace); // flush after every message, no matter the log level
-				if (basicLogger != spdlog::get("basic_logger")) {
-					DebugBreak(); // logger isn't registered?
-					Log("");
-				}
-				if (basicLogger->sinks().size() != 1) {
-					DebugBreak(); // unexpected number of sinks?
-					Log("");
-				}
-			}
-			basicLogger->info(msg);
-			//basicLogger->flush();
+			logfileMap[channel]->info(msg);
 		}
 	}
 
 	void Log(string_view msg, const bool close, const int channel) {
 		Log(msg, channel);
-		if (close && logfileMap.contains(channel) && logfileMap[channel].is_open()) {
-			logfileMap[channel].close();
+		if (close && logfileMap.contains(channel) && logfileMap[channel] != nullptr) {
 			// Remove logger from spdlog registry
-			spdlog::drop("basic_logger");
+			spdlog::drop(logfileMap[channel]->name());
 			// Release our shared_ptr to the logger (which should be the last one pointing to it).
 			// All resources for this logger should then be freed and the corresponding log file closed.
-			basicLogger.reset();
+			logfileMap[channel].reset();
 		}
 	}
 

@@ -19,6 +19,8 @@
 #include <fmt/os.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/msvc_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #ifdef __INTELLISENSE__
 #pragma diag_default 1574, 2500
 #endif
