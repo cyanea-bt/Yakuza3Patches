@@ -51,20 +51,27 @@ namespace utils {
 	// ref: https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
 	class counter_flag final : public spdlog::custom_flag_formatter {
 	public:
+		counter_flag() {}
+		// Would rather have the format string evaluated at compile time but haven't figured out how to do that yet
+		explicit counter_flag(uint8_t padZeros)
+			: padCounter{ padZeros }, fmtCounter{ "{:0" + fmt::format("{:d}", padZeros) + "d}" } {}
+
 		void format(const spdlog::details::log_msg &, const std::tm &, spdlog::memory_buf_t &dest) override
 		{
-			const std::string strCounter = fmt::cformat("{:08d}", counter++);
+			const std::string strCounter = fmt::format(fmt::runtime(fmtCounter), counter++);
 			dest.append(strCounter.data(), strCounter.data() + strCounter.size());
 		}
 
 		std::unique_ptr<custom_flag_formatter> clone() const override
 		{
-			auto cloned = spdlog::details::make_unique<counter_flag>();
+			auto cloned = spdlog::details::make_unique<counter_flag>(padCounter);
 			cloned->counter = counter;
 			return cloned;
 		}
 
 	private:
+		uint8_t padCounter = 8;
+		string fmtCounter = "{:08d}";
 		uint64_t counter = 0;
 	};
 
@@ -95,7 +102,7 @@ namespace utils {
 						}
 						else {
 							auto formatter = std::make_unique<spdlog::pattern_formatter>();
-							formatter->add_flag<counter_flag>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
+							formatter->add_flag<counter_flag>('*', 8).set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
 							logfileMap[channel]->set_formatter(std::move(formatter));
 						}
 					}
@@ -133,7 +140,7 @@ namespace utils {
 						}
 						else {
 							auto formatter = std::make_unique<spdlog::pattern_formatter>();
-							formatter->add_flag<counter_flag>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
+							formatter->add_flag<counter_flag>('*', 8).set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
 							logfileMap[channel]->set_formatter(std::move(formatter));
 						}
 					}
