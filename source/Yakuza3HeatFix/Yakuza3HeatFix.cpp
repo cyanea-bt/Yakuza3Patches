@@ -31,8 +31,10 @@ namespace HeatFix {
 		const float curHeat = GetCurHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(fmt::format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:f}",
-				"GetCurrentHeatValue", dbg_Counter1++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat), 1);
+			utils::Log(fmt::format(
+				"{:d} - playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:f}",
+				dbg_Counter1++, (void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat), 1
+			);
 		}
 		return curHeat;
 	}
@@ -52,8 +54,10 @@ namespace HeatFix {
 		const float maxHeat = GetMaxHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(fmt::format("{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:f}",
-				"GetMaxHeatValue", dbg_Counter2++, utils::TzString_ms(), (void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat), 2);
+			utils::Log(fmt::format(
+				"{:d} - playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:f}",
+				dbg_Counter2++, (void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat), 2
+			);
 		}
 		return maxHeat;
 	}
@@ -87,8 +91,8 @@ namespace HeatFix {
 			}
 
 			utils::Log(fmt::format(
-				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - newDrainTimer: {:d} - incomingDamage: {:d}",
-				"PatchedIsPlayerDrunk", dbg_Counter6++, utils::TzString_ms(), (void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
+				"{:d} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - newDrainTimer: {:d} - incomingDamage: {:d}",
+				dbg_Counter6++, (void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
 			);
 		}
 
@@ -105,8 +109,8 @@ namespace HeatFix {
 		const string str(retVal);
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:s} - {:d} - TzNow: {:s} - param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
-				"PatchedGetDisplayString", dbg_Counter7++, utils::TzString_ms(), param1, param2, param3, (void *)retVal, str), 7
+				"{:d} - param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
+				dbg_Counter7++, param1, param2, param3, (void *)retVal, str), 7
 			);
 		}
 
@@ -213,8 +217,8 @@ namespace HeatFix {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:s} - {:d} - TzNow: {:s} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
-				"GetNewHeatDrainTimer", dbg_Counter3++, utils::TzString_ms(), (void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
+				"{:d} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
+				dbg_Counter3++, (void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
 			);
 		}
 		lastDrainTimer = newDrainTimer;
@@ -352,8 +356,8 @@ namespace HeatFix {
 			const bool playerGotKnockedDown = (playerStatus == 4) && (unkUInt1 == 0x3) && (unkUInt2 <= 0x3c);
 			if (playerStatus == 4) {
 				utils::Log(fmt::format(
-					"{:s} - {:d} - TzNow: {:s} - heatDiff: {:f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
-					"GetNewHeatValue", dbg_Counter4++, utils::TzString_ms(), heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 4
+					"{:d} - heatDiff: {:f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
+					dbg_Counter4++, heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 4
 				);
 			}
 
@@ -377,8 +381,8 @@ namespace HeatFix {
 			}
 
 			utils::Log(fmt::format(
-				"{:s} - {:d} - TzNow: {:s} - oldHeatVal: {:f} - newHeatVal: {:f} - heatDiff: {:f} - retHeatVal: {:f} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
-				"GetNewHeatValue", dbg_Counter5++, utils::TzString_ms(), oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer), 5
+				"{:d} - oldHeatVal: {:f} - newHeatVal: {:f} - heatDiff: {:f} - retHeatVal: {:f} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
+				dbg_Counter5++, oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer), 5
 			);
 		}
 
@@ -410,13 +414,13 @@ void OnInitializeHook()
 
 			if (isDEBUG) {
 				// Open debug logfile streams (not necessary but will save some time on the first real log message)
-				utils::Log("", 1);
-				utils::Log("", 2);
-				utils::Log("", 3);
-				utils::Log("", 4);
-				utils::Log("", 5);
-				utils::Log("", 6);
-				utils::Log("", 7);
+				utils::Log("", 1, "GetCurrentHeatValue");
+				utils::Log("", 2, "GetMaxHeatValue");
+				utils::Log("", 3, "GetNewHeatDrainTimer");
+				utils::Log("", 4, "GetNewHeatValue_1");
+				utils::Log("", 5, "GetNewHeatValue_2");
+				utils::Log("", 6, "PatchedIsPlayerDrunk");
+				utils::Log("", 7, "PatchedGetDisplayString");
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");

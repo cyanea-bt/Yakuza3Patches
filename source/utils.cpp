@@ -47,7 +47,7 @@ namespace utils {
 	static map<int, shared_ptr<spdlog::logger>> logfileMap;
 	static bool logFailed = false;
 
-	void Log(string_view msg, const int channel) {
+	void Log(string_view msg, const int channel, string_view loggerName) {
 		string filename;
 		if (!logfileMap.contains(channel)) {
 			if (!logFailed) {
@@ -57,9 +57,10 @@ namespace utils {
 				else {
 					filename = fmt::format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
 				}
-				spdlog::info("Creating logger: \"{:s}\"", filename); // for testing, will be removed
+				const string name = loggerName.empty() ? filename : string(loggerName);
+				spdlog::info("Creating logger: \"{:s}\"", name); // for testing, will be removed
 				try {
-					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, true); // truncate
+					logfileMap[channel] = spdlog::basic_logger_st(name, filename, true); // truncate
 					logfileMap[channel]->set_level(spdlog::level::debug);
 					logfileMap[channel]->flush_on(spdlog::level::debug);
 					// default (?) pattern: [%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v
@@ -68,7 +69,12 @@ namespace utils {
 						logfileMap[channel]->set_pattern("%v");
 					}
 					else {
-						logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
+						if (loggerName.empty()) {
+							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
+						}
+						else {
+							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] [%n] %v");
+						}
 					}
 				}
 				catch (const spdlog::spdlog_ex &ex)
@@ -82,23 +88,29 @@ namespace utils {
 			}
 		}
 		else {
-			if ((logfileMap[channel] == nullptr && !logFailed)) {
+			if ((logfileMap[channel] == nullptr && !msg.empty() && !logFailed)) {
 				if (channel == -1) {
 					filename = fmt::format("{:s}.txt", rsc_Name);
 				}
 				else {
 					filename = fmt::format("{:s}{:s}{:d}.txt", rsc_Name, "_Debug", channel);
 				}
-				spdlog::warn("Re-creating logger: \"{:s}\"", filename); // for testing, will be removed
+				const string name = loggerName.empty() ? filename : string(loggerName);
+				spdlog::warn("Re-creating logger: \"{:s}\"", name); // for testing, will be removed
 				try {
-					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, false); // append
+					logfileMap[channel] = spdlog::basic_logger_st(name, filename, false); // append
 					logfileMap[channel]->set_level(spdlog::level::debug);
 					logfileMap[channel]->flush_on(spdlog::level::debug);
 					if (channel == -1) {
 						logfileMap[channel]->set_pattern("%v");
 					}
 					else {
-						logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
+						if (loggerName.empty()) {
+							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
+						}
+						else {
+							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] [%n] %v");
+						}
 					}
 				}
 				catch (const spdlog::spdlog_ex &ex)
@@ -116,8 +128,8 @@ namespace utils {
 		}
 	}
 
-	void Log(string_view msg, const bool close, const int channel) {
-		Log(msg, channel);
+	void Log(string_view msg, const bool close, const int channel, string_view loggerName) {
+		Log(msg, channel, loggerName);
 		if (close && logfileMap.contains(channel) && logfileMap[channel] != nullptr) {
 			// Remove logger from spdlog registry
 			spdlog::drop(logfileMap[channel]->name());

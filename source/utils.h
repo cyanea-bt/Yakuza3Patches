@@ -5,6 +5,7 @@
 #pragma warning(disable : 26451)
 #pragma warning(disable : 26812)
 #pragma warning(disable : 26439)
+#pragma warning(disable : 28251)
 #ifdef __INTELLISENSE__
 #pragma diag_suppress 1574, 2500 // nonsense Intellisense errors for fmtlib
 #endif
@@ -36,8 +37,8 @@ namespace utils {
 	std::string UTCString_ms();
 	std::string TzString();
 	std::string TzString_ms();
-	void Log(std::string_view msg, const int channel = -1);
-	void Log(std::string_view msg, const bool close, const int channel = -1);
+	void Log(std::string_view msg, const int channel = -1, std::string_view loggerName = {});
+	void Log(std::string_view msg, const bool close, const int channel = -1, std::string_view loggerName = {});
 
 	std::string replaceAll(const std::string &str, const std::string &from, const std::string &to);
 	void replaceAllByRef(std::string &str, const std::string &from, const std::string &to);

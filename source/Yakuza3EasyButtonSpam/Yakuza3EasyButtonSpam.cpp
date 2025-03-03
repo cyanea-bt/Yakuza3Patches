@@ -36,8 +36,10 @@ namespace EasySpam {
 		const uint8_t result = addHeat(param1, newChargeAmount);
 
 		if (isDEBUG) {
-			utils::Log(fmt::format("ChargeFeelTheHeat - TzNow: {:s} - {:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
-				utils::TzString_ms(), dbg_Counter4++, oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result), 4);
+			utils::Log(fmt::format(
+				"{:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
+				dbg_Counter4++, oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result), 4
+			);
 		}
 
 		return result;
@@ -50,8 +52,10 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(fmt::format("DecreaseHoldPower - TzNow: {:s} - {:d} - oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
-				utils::TzString_ms(), dbg_Counter3++, oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower), 3);
+			utils::Log(fmt::format(
+				"{:d} - oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
+				dbg_Counter3++, oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower), 3
+			);
 		}
 
 		return newHoldPower;
@@ -64,8 +68,10 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(fmt::format("IncreaseThrowResistance - TzNow: {:s} - {:d} - oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
-				utils::TzString_ms(), dbg_Counter2++, oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes), 2);
+			utils::Log(fmt::format(
+				"{:d} - oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
+				dbg_Counter2++, oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes), 2
+			);
 		}
 
 		return newThrowRes;
@@ -93,8 +99,10 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(fmt::format("GetEnemyThrowResistance - TzNow: {:s} - {:d} - origThrowRes: {:d} - EnemyThrowResDiv: {:d} - easyThrowRes: {:d}", 
-				utils::TzString_ms(), dbg_Counter1++, origThrowRes, CONFIG.ThrowEnemy, easyThrowRes), 1);
+			utils::Log(fmt::format(
+				"{:d} - origThrowRes: {:d} - EnemyThrowResDiv : {:d} - easyThrowRes : {:d}", 
+				dbg_Counter1++, origThrowRes, CONFIG.ThrowEnemy, easyThrowRes), 1
+			);
 		}
 
 		return easyThrowRes;
@@ -129,10 +137,10 @@ void OnInitializeHook()
 
 		if (isDEBUG) {
 			// Open debug logfile streams (not necessary but will save some time on the first real log message)
-			utils::Log("", 1);
-			utils::Log("", 2);
-			utils::Log("", 3);
-			utils::Log("", 4);
+			utils::Log("", 1, "GetEnemyThrowResistance");
+			utils::Log("", 2, "IncreaseThrowResistance");
+			utils::Log("", 3, "DecreaseHoldPower");
+			utils::Log("", 4, "ChargeFeelTheHeat");
 
 			// GetEnemyThrowResistance - to verify we're calling the correct function
 			auto enemyThrowCheck = pattern("0f b6 81 ba 1c 00 00 c3");
