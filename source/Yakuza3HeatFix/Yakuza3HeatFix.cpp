@@ -766,10 +766,5 @@ void OnInitializeHook()
 	}
 
 	// log current time to file to get some feedback once hook is done
-	utils::Log("Hook done!");
-	utils::Log(fmt::format("Config path: \"{:s}\"", CONFIG.path));
-	utils::Log(fmt::format("Local: {:s}", utils::TzString()));
-	utils::Log(fmt::format("UTC:   {:s}", utils::UTCString()), true);
-	utils::Log("Reopen!"); // for testing, will be removed
-	utils::Log("Close again!", true); // for testing, will be removed
+	Yakuza3::Done("Hook done!");
 }

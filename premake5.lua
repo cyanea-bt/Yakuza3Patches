@@ -68,6 +68,7 @@ workspace "*"
 	defines { 
 		"rsc_Extension=\"%{prj.targetextension}\"",
 		"rsc_Name=\"%{prj.name}\"",
+		"rsc_Game=\"Yakuza 3\"",
 		"rsc_Repository=\"https://github.com/cyanea-bt/Yakuza3Patches\"",
 		"rsc_UpdateURL=\"https://github.com/cyanea-bt/Yakuza3Patches/releases\"",
 		"rsc_Copyright=\"2025 cyanea-bt\""

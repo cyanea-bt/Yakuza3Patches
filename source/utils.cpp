@@ -3,6 +3,12 @@
 #include <map>
 #include "utils.h"
 
+#if _DEBUG
+static constexpr bool isDEBUG = true;
+#else
+static constexpr bool isDEBUG = false;
+#endif // _DEBUG
+
 
 namespace utils {
 	using namespace std;
@@ -53,16 +59,24 @@ namespace utils {
 				}
 				spdlog::info("Creating logger: \"{:s}\"", filename); // for testing, will be removed
 				try {
-					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, true);
+					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, true); // truncate
 					logfileMap[channel]->set_level(spdlog::level::debug);
 					logfileMap[channel]->flush_on(spdlog::level::debug);
 					// default (?) pattern: [%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v
 					// ref: https://github.com/gabime/spdlog/blob/3335c380a0/include/spdlog/pattern_formatter-inl.h#L835
-					logfileMap[channel]->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+					if (channel == -1) {
+						logfileMap[channel]->set_pattern("%v");
+					}
+					else {
+						logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
+					}
 				}
 				catch (const spdlog::spdlog_ex &ex)
 				{
 					spdlog::error(ex.what());
+					if (isDEBUG) {
+						DebugBreak();
+					}
 					logFailed = true; // Log initialization failed
 				}
 			}
@@ -77,14 +91,22 @@ namespace utils {
 				}
 				spdlog::warn("Re-creating logger: \"{:s}\"", filename); // for testing, will be removed
 				try {
-					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, false);
+					logfileMap[channel] = spdlog::basic_logger_st(filename, filename, false); // append
 					logfileMap[channel]->set_level(spdlog::level::debug);
 					logfileMap[channel]->flush_on(spdlog::level::debug);
-					logfileMap[channel]->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+					if (channel == -1) {
+						logfileMap[channel]->set_pattern("%v");
+					}
+					else {
+						logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
+					}
 				}
 				catch (const spdlog::spdlog_ex &ex)
 				{
 					spdlog::error(ex.what());
+					if (isDEBUG) {
+						DebugBreak();
+					}
 					logFailed = true; // Log initialization failed
 				}
 			}
@@ -101,6 +123,11 @@ namespace utils {
 			spdlog::drop(logfileMap[channel]->name());
 			// Release our shared_ptr to the logger (which should be the last one pointing to it).
 			// All resources for this logger should then be freed and the corresponding log file closed.
+			if (isDEBUG) {
+				if (logfileMap[channel].use_count() != 1) {
+					DebugBreak();
+				}
+			}
 			logfileMap[channel].reset();
 		}
 	}
