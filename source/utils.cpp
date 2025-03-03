@@ -75,10 +75,22 @@ namespace utils {
 		if (!msg.empty() && !logFailed) {
 			logfileMap[channel] << msg << endl;
 			if (basicLogger == nullptr) {
-				basicLogger = spdlog::basic_logger_st("basic_logger", fmt::format("{:s}_SPD.txt", rsc_Name));
+				basicLogger = spdlog::basic_logger_st("basic_logger", fmt::format("{:s}_SPD.txt", rsc_Name), true);
+				// default (?) pattern: [%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v
+				// ref: https://github.com/gabime/spdlog/blob/3335c380a0/include/spdlog/pattern_formatter-inl.h#L835
+				basicLogger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+				spdlog::flush_on(spdlog::level::trace); // flush after every message, no matter the log level
+				if (basicLogger != spdlog::get("basic_logger")) {
+					DebugBreak(); // logger isn't registered?
+					Log("");
+				}
+				if (basicLogger->sinks().size() != 1) {
+					DebugBreak(); // unexpected number of sinks?
+					Log("");
+				}
 			}
 			basicLogger->info(msg);
-			basicLogger->flush();
+			//basicLogger->flush();
 		}
 	}
 
@@ -86,6 +98,11 @@ namespace utils {
 		Log(msg, channel);
 		if (close && logfileMap.contains(channel) && logfileMap[channel].is_open()) {
 			logfileMap[channel].close();
+			// Remove logger from spdlog registry
+			spdlog::drop("basic_logger");
+			// Release our shared_ptr to the logger (which should be the last one pointing to it).
+			// All resources for this logger should then be freed and the corresponding log file closed.
+			basicLogger.reset();
 		}
 	}
 

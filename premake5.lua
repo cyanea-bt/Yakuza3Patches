@@ -73,6 +73,23 @@ workspace "*"
 		"rsc_Copyright=\"2025 cyanea-bt\""
 	}
 
+	newoption {
+		trigger = "with-postbuild",
+		description = "Set up default Post-Build Event"
+	}
+
+	newoption {
+		trigger = "with-dbg-cmd",
+		description = "Set up default debug command"
+	}
+
+	filter { "options:with-postbuild" }
+		postbuildcommands { "xcopy /V /F /Y \"%{!cfg.buildtarget.abspath}\" \"C:/Games/Yakuza 3/mods/%{prj.name}/\"" }
+
+	filter { "options:with-dbg-cmd" }
+		debugdir "C:/Games/Yakuza 3"
+		debugcommand "C:/Games/Yakuza 3/Yakuza3.exe"
+
 filter "configurations:Debug"
 	defines { "DEBUG", "_DEBUG" }
 	runtime "Debug"

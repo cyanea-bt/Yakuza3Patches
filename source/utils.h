@@ -1,13 +1,15 @@
-#pragma warning(push) // fmtlib warnings
+#pragma warning(push) // fmtlib/spdlog warnings
 #pragma warning(disable : 6294)
 #pragma warning(disable : 26495)
 #pragma warning(disable : 26498)
 #pragma warning(disable : 26451)
 #pragma warning(disable : 26812)
+#pragma warning(disable : 26439)
 #ifdef __INTELLISENSE__
 #pragma diag_suppress 1574, 2500 // nonsense Intellisense errors for fmtlib
 #endif
 #define FMT_HEADER_ONLY
+#define SPDLOG_HEADER_ONLY
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/chrono.h>
@@ -15,12 +17,12 @@
 #include <fmt/ranges.h>
 #include <fmt/std.h>
 #include <fmt/os.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
 #ifdef __INTELLISENSE__
 #pragma diag_default 1574, 2500
 #endif
 #pragma warning(pop)
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
 
 // I kinda hate this but I couldn't find a better solution
 // ref: https://stackoverflow.com/a/73512139
