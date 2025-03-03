@@ -5,9 +5,6 @@
 
 namespace LegacyHeatFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0;
-	static string dbg_msg;
-
 	/*
 	* Parameter types aren't correct but it shouldn't matter for our purposes.
 	* param1 is probably a pointer to the player actor object
@@ -37,6 +34,7 @@ namespace LegacyHeatFix {
 	static bool didNotProcessBlock = false;
 
 	static void PatchedHeatFunc(uintptr_t param1, uintptr_t param2, uintptr_t param3, uintptr_t param4) {
+		string dbg_msg;
 		HeatFix::PlayerActor = (void **)param1; // save address of player actor for use in PatchedGetDisplayString()
 
 		// MOV  param_1,qword ptr [DAT_14122cde8]
@@ -111,11 +109,11 @@ namespace LegacyHeatFix {
 				utils::Log(""); // Should have subtracted Heat on last frame but missed it due to 30fps cap on UpdateHeat
 			}
 
-			dbg_msg = fmt::format("TzNow: {:s} - IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
-				utils::TzString_ms(), IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
-			utils::Log(fmt::format("PatchedHeatFunc: {:d} - {:s}", dbg_Counter1++, dbg_msg), 1);
+			dbg_msg = fmt::format("IsPlayerInCombat: {:d} - IsCombatInactive: {:d} - isCombatPausedByTutorial: {:d} - IsActorDead: {:d} - isCombatInTransition: {:d} - isCombatFinished: {:d}",
+				IsPlayerInCombat(), IsCombatInactive(), isCombatPausedByTutorial, IsActorDead(param1), isCombatInTransition, isCombatFinished);
+			utils::Log(dbg_msg, 1);
 			if (counter % 2 == 0) {
-				utils::Log(fmt::format("OrigHeatFunc: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
+				utils::Log(dbg_msg, 2);
 			}
 		}
 
@@ -125,7 +123,7 @@ namespace LegacyHeatFix {
 		}
 		else if (counter == 1 && (IsCombatInactive() || isCombatPausedByTutorial || IsActorDead(param1) || isCombatInTransition || isCombatFinished)) {
 			if (isDEBUG) {
-				utils::Log(fmt::format("Fast UpdateHeat: {:d} - {:s}", dbg_Counter2++, dbg_msg), 2);
+				utils::Log(fmt::format("<<< Fast UpdateHeat >>> {:s}", dbg_msg), 2);
 			}
 			// UpdateHeat() won't change the Heat value in these cases, but will still execute some code.
 			// Since I don't know how important that code is, we'll call UpdateHeat() immediately instead of waiting for the next frame/update.
@@ -194,8 +192,8 @@ namespace LegacyHeatFix {
 		*/
 		if (isDEBUG) {
 			// Open debug logfile streams (not necessary but will save some time on the first real log message)
-			utils::Log("", 1);
-			utils::Log("", 2);
+			utils::Log("", 1, "PatchedHeatFunc");
+			utils::Log("", 2, "OrigHeatFunc");
 
 			// UpdateHeat - verify we're calling the correct function
 			auto updateHeatCheck = pattern("40 53 48 81 ec c0 00 00 00 48 8b d9 e8");

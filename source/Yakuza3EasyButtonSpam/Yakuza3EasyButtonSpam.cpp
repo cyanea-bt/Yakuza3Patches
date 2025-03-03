@@ -4,7 +4,6 @@
 
 namespace EasySpam {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0;
 
 	typedef uint8_t (*GetEnemyThrowResistanceType)(uintptr_t);
 	static GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
@@ -37,8 +36,8 @@ namespace EasySpam {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
-				dbg_Counter4++, oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result), 4
+				"oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
+				oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result), 4
 			);
 		}
 
@@ -53,8 +52,8 @@ namespace EasySpam {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
-				dbg_Counter3++, oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower), 3
+				"oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
+				oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower), 3
 			);
 		}
 
@@ -69,8 +68,8 @@ namespace EasySpam {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
-				dbg_Counter2++, oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes), 2
+				"oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
+				oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes), 2
 			);
 		}
 
@@ -100,8 +99,8 @@ namespace EasySpam {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - origThrowRes: {:d} - EnemyThrowResDiv : {:d} - easyThrowRes : {:d}", 
-				dbg_Counter1++, origThrowRes, CONFIG.ThrowEnemy, easyThrowRes), 1
+				"origThrowRes: {:d} - EnemyThrowResDiv : {:d} - easyThrowRes : {:d}", 
+				origThrowRes, CONFIG.ThrowEnemy, easyThrowRes), 1
 			);
 		}
 

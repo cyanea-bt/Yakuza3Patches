@@ -47,6 +47,27 @@ namespace utils {
 	static map<int, shared_ptr<spdlog::logger>> logfileMap;
 	static bool logFailed = false;
 
+	// Custom flag with counter that gets incremented after each use
+	// ref: https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
+	class counter_flag final : public spdlog::custom_flag_formatter {
+	public:
+		void format(const spdlog::details::log_msg &, const std::tm &, spdlog::memory_buf_t &dest) override
+		{
+			const std::string strCounter = fmt::cformat("{:08d}", counter++);
+			dest.append(strCounter.data(), strCounter.data() + strCounter.size());
+		}
+
+		std::unique_ptr<custom_flag_formatter> clone() const override
+		{
+			auto cloned = spdlog::details::make_unique<counter_flag>();
+			cloned->counter = counter;
+			return cloned;
+		}
+
+	private:
+		uint64_t counter = 0;
+	};
+
 	void Log(string_view msg, const int channel, string_view loggerName) {
 		string filename;
 		if (!logfileMap.contains(channel)) {
@@ -73,7 +94,9 @@ namespace utils {
 							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
 						}
 						else {
-							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] [%n] %v");
+							auto formatter = std::make_unique<spdlog::pattern_formatter>();
+							formatter->add_flag<counter_flag>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
+							logfileMap[channel]->set_formatter(std::move(formatter));
 						}
 					}
 				}
@@ -109,7 +132,9 @@ namespace utils {
 							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] %v");
 						}
 						else {
-							logfileMap[channel]->set_pattern("[%Y/%m/%d %H:%M:%S.%e] [%n] %v");
+							auto formatter = std::make_unique<spdlog::pattern_formatter>();
+							formatter->add_flag<counter_flag>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
+							logfileMap[channel]->set_formatter(std::move(formatter));
 						}
 					}
 				}

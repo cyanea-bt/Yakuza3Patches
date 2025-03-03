@@ -4,7 +4,6 @@
 
 namespace EnemyAIFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0, dbg_Counter5 = 0;
 }
 
 

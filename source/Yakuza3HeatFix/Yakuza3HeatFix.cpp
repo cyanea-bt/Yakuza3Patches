@@ -5,7 +5,6 @@
 
 namespace HeatFix {
 	using namespace std;
-	static uint64_t dbg_Counter1 = 0, dbg_Counter2 = 0, dbg_Counter3 = 0, dbg_Counter4 = 0, dbg_Counter5 = 0, dbg_Counter6 = 0, dbg_Counter7 = 0;
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
@@ -32,8 +31,8 @@ namespace HeatFix {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:f}",
-				dbg_Counter1++, (void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat), 1
+				"playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:.3f}",
+				(void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat), 1
 			);
 		}
 		return curHeat;
@@ -55,8 +54,8 @@ namespace HeatFix {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:f}",
-				dbg_Counter2++, (void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat), 2
+				"playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:.3f}",
+				(void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat), 2
 			);
 		}
 		return maxHeat;
@@ -91,8 +90,8 @@ namespace HeatFix {
 			}
 
 			utils::Log(fmt::format(
-				"{:d} - playerActor: {:p} - oldHeatVal: {:f} - newHeatVal: {:f} - newDrainTimer: {:d} - incomingDamage: {:d}",
-				dbg_Counter6++, (void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
+				"playerActor: {:p} - oldHeatVal: {:.3f} - newHeatVal: {:.3f} - newDrainTimer: {:d} - incomingDamage: {:d}",
+				(void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
 			);
 		}
 
@@ -109,8 +108,8 @@ namespace HeatFix {
 		const string str(retVal);
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
-				dbg_Counter7++, param1, param2, param3, (void *)retVal, str), 7
+				"param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
+				param1, param2, param3, (void *)retVal, str), 7
 			);
 		}
 
@@ -217,8 +216,8 @@ namespace HeatFix {
 
 		if (isDEBUG) {
 			utils::Log(fmt::format(
-				"{:d} - playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
-				dbg_Counter3++, (void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
+				"playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
+				(void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
 			);
 		}
 		lastDrainTimer = newDrainTimer;
@@ -356,8 +355,8 @@ namespace HeatFix {
 			const bool playerGotKnockedDown = (playerStatus == 4) && (unkUInt1 == 0x3) && (unkUInt2 <= 0x3c);
 			if (playerStatus == 4) {
 				utils::Log(fmt::format(
-					"{:d} - heatDiff: {:f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
-					dbg_Counter4++, heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 4
+					"heatDiff: {:.3f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:.3f} - newDrainTimer: {:d}",
+					heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 4
 				);
 			}
 
@@ -381,8 +380,8 @@ namespace HeatFix {
 			}
 
 			utils::Log(fmt::format(
-				"{:d} - oldHeatVal: {:f} - newHeatVal: {:f} - heatDiff: {:f} - retHeatVal: {:f} - incomingDamage: {:d} - baseDrainRate: {:f} - newDrainTimer: {:d}",
-				dbg_Counter5++, oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer), 5
+				"oldHeatVal: {:.3f} - newHeatVal: {:.3f} - heatDiff: {:.3f} - retHeatVal: {:.3f} - incomingDamage: {:d} - baseDrainRate: {:.3f} - newDrainTimer: {:d}",
+				oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer), 5
 			);
 		}
 
