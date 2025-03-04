@@ -123,7 +123,7 @@ namespace HeatFix {
 			GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
 			const float heatValue = GetCurHeat(PlayerActor);
 
-			replaceStr = fmt::cformat("Timer (drain starts at 115): {:03d} ; Current Heat: {:08.2f}", heatDrainTimer, heatValue);
+			replaceStr = fmt::cformat("Drain Timer: {:03d}/{:d} ; Current Heat: {:08.2f}", heatDrainTimer, MAX_DrainTimer, heatValue);
 			retVal = replaceStr.data();
 		}
 		return retVal;
