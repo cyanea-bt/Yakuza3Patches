@@ -30,9 +30,9 @@ namespace HeatFix {
 		const float curHeat = GetCurHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(1,
 				"playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:.3f}",
-				(void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat), 1
+				(void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat
 			);
 		}
 		return curHeat;
@@ -53,9 +53,9 @@ namespace HeatFix {
 		const float maxHeat = GetMaxHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(2,
 				"playerActor: {:p} - vfTable: {:p} - GetMaxHeat: {:p} - maxHeat: {:.3f}",
-				(void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat), 2
+				(void *)playerActor, (void *)vfTable, (void *)GetMaxHeat, maxHeat
 			);
 		}
 		return maxHeat;
@@ -89,9 +89,9 @@ namespace HeatFix {
 				utils::Log("");
 			}
 
-			utils::Log(fmt::format(
+			utils::Log(6,
 				"playerActor: {:p} - oldHeatVal: {:.3f} - newHeatVal: {:.3f} - newDrainTimer: {:d} - incomingDamage: {:d}",
-				(void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage), 6
+				(void *)playerActor, oldHeatVal, newHeatVal, newDrainTimer, incomingDamage
 			);
 		}
 
@@ -107,9 +107,9 @@ namespace HeatFix {
 		char *retVal = origGetDisplayString(param1, param2, param3);
 		const string str(retVal);
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(7,
 				"param1: {:p} - param2: {:d} - param3: {:d} - pStr: {:p} - str: {:s}",
-				param1, param2, param3, (void *)retVal, str), 7
+				param1, param2, param3, (void *)retVal, str
 			);
 		}
 
@@ -215,9 +215,9 @@ namespace HeatFix {
 		}
 
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(3,
 				"playerActor: {:p} - drainTimeMulti: {:d} - drainTimeLimiter: {:d} - curDrainTimer: {:d} - newDrainTimer: {:d} - substituteTimer: {:d}", 
-				(void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer), 3
+				(void *)playerActor, CONFIG.DrainTimeMulti, oldDrainTimeLimiter, curDrainTimer, newDrainTimer, oldSubstituteTimer
 			);
 		}
 		lastDrainTimer = newDrainTimer;
@@ -354,9 +354,9 @@ namespace HeatFix {
 			}
 			const bool playerGotKnockedDown = (playerStatus == 4) && (unkUInt1 == 0x3) && (unkUInt2 <= 0x3c);
 			if (playerStatus == 4) {
-				utils::Log(fmt::format(
+				utils::Log(4,
 					"heatDiff: {:.3f} - unkUInt1: {:d} - unkUInt2: {:d} - incomingDamage: {:d} - baseDrainRate: {:.3f} - newDrainTimer: {:d}",
-					heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer), 4
+					heatDiff, unkUInt1, unkUInt2, incomingDamage, baseDrainRate, newDrainTimer
 				);
 			}
 
@@ -379,9 +379,9 @@ namespace HeatFix {
  				utils::Log("");
 			}
 
-			utils::Log(fmt::format(
+			utils::Log(5,
 				"oldHeatVal: {:.3f} - newHeatVal: {:.3f} - heatDiff: {:.3f} - retHeatVal: {:.3f} - incomingDamage: {:d} - baseDrainRate: {:.3f} - newDrainTimer: {:d}",
-				oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer), 5
+				oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer
 			);
 		}
 

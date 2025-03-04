@@ -123,7 +123,7 @@ namespace LegacyHeatFix {
 		}
 		else if (counter == 1 && (IsCombatInactive() || isCombatPausedByTutorial || IsActorDead(param1) || isCombatInTransition || isCombatFinished)) {
 			if (isDEBUG) {
-				utils::Log(fmt::format("Fast UpdateHeat >>>>>> {:s}", dbg_msg), 2);
+				utils::Log(2, "Fast UpdateHeat >>>>>> {:s}", dbg_msg);
 			}
 			// UpdateHeat() won't change the Heat value in these cases, but will still execute some code.
 			// Since I don't know how important that code is, we'll call UpdateHeat() immediately instead of waiting for the next frame/update.

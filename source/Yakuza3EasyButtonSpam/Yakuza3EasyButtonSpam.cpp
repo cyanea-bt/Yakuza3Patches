@@ -35,9 +35,9 @@ namespace EasySpam {
 		const uint8_t result = addHeat(param1, newChargeAmount);
 
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(4,
 				"oldChargeAmount: {:d} - FeelTheHeatChargeMulti: {:d} - newChargeAmount: {:d} - result: {:d}",
-				oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result), 4
+				oldChargeAmount, CONFIG.ChargeFeelTheHeat, newChargeAmount, result
 			);
 		}
 
@@ -51,9 +51,9 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(3,
 				"oldHoldPower: {:d} - EnemyHoldPowerSub: {:d} - newHoldPower: {:d}",
-				oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower), 3
+				oldHoldPower, CONFIG.EscapeEnemyGrab, newHoldPower
 			);
 		}
 
@@ -67,9 +67,9 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(2,
 				"oldThrowRes: {:d} - EnemyThrowResInc: {:d} - newThrowRes: {:d}",
-				oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes), 2
+				oldThrowRes, CONFIG.EnemyThrowResIncrease, newThrowRes
 			);
 		}
 
@@ -98,9 +98,9 @@ namespace EasySpam {
 		}
 
 		if (isDEBUG) {
-			utils::Log(fmt::format(
+			utils::Log(1,
 				"origThrowRes: {:d} - EnemyThrowResDiv : {:d} - easyThrowRes : {:d}", 
-				origThrowRes, CONFIG.ThrowEnemy, easyThrowRes), 1
+				origThrowRes, CONFIG.ThrowEnemy, easyThrowRes
 			);
 		}
 

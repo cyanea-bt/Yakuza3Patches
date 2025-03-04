@@ -58,4 +58,12 @@ namespace utils {
 		memcpy(&addr, std::addressof(func), sizeof(addr));
 		return addr;
 	}
+
+	// Wrapper around fmt::format()
+	// ref: https://github.com/fmtlib/fmt/issues/2391#issuecomment-869043202
+	template<typename... T>
+	void Log(const int channel, fmt::format_string<T...> fmt, T&&... args) {
+		const auto str = fmt::format(fmt, std::forward<T>(args)...);
+		Log(str, channel);
+	}
 }
