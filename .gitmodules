@@ -2,11 +2,11 @@
 	path = source/ModUtils
 	url = https://github.com/CookiePLMonster/ModUtils.git
 [submodule "source/json"]
-	path = source/json
+	path = 3rdparty/json
 	url = https://github.com/nlohmann/json.git
 [submodule "source/fmt"]
-	path = source/fmt
+	path = 3rdparty/fmt
 	url = https://github.com/fmtlib/fmt.git
 [submodule "source/spdlog"]
-	path = source/spdlog
+	path = 3rdparty/spdlog
 	url = https://github.com/gabime/spdlog.git
