@@ -8,12 +8,13 @@ namespace HeatFix {
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 	static constexpr uint16_t MAX_DrainTimer = 0x73;
+	static constexpr float floatMulti = 1.0f / 2.0f; // for float values that have to be halved when running at 60 fps
+	static constexpr uint8_t integerDiv = 2; // for integer values that have to be halved when running at 60 fps
 
 	typedef bool (*GetActorBoolType)(void **);
 	typedef float (*GetActorFloatType)(void **);
 	static GetActorBoolType verifyIsPlayerDrunk = nullptr;
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
-	static constexpr float floatMulti = 0.5f; // for float values that have to be halved when running at 60 fps
 
 	static float GetCurrentHeatValue(void **playerActor) {
 		// MOV RAX,qword ptr [param_1]
@@ -84,7 +85,7 @@ namespace HeatFix {
 			const float oldHeatVal = GetCurrentHeatValue(playerActor);
 			if (newHeatVal != oldHeatVal && newDrainTimer != 0) {
 				// AFAIK - Heat value should be unchanged at this point, unless player and enemy hit each other on the same frame
-				// In that rare case (newDrainTimer) should be == 0, since the player hitting the enemy resets it to 0
+				// In that rare case (newDrainTimer) should be == 0, since the player hitting the enemy resets it to 0.
 				DebugBreak();
 				utils::Log("");
 			}
@@ -677,6 +678,50 @@ void OnInitializeHook()
 
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 				InjectHook(addAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
+			}
+
+			/*
+			* ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 80 bb - Heat boost by "Golden Dragon Spirit"
+			* ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 85 c0 - Heat boost by "Leech Gloves"
+			* 
+			* Both call the AddRemoveHeat(void **actor, int32_t chargeAmount) function to continuously
+			* add Heat on every frame while the ability is active. So while holding down the taunt button
+			* for "Golden Dragon Spirit" or while holding onto an enemy for the "Leech Gloves".
+			* Again - I verified these run at twice their intended rate by comparing against the PS3 version.
+			* 
+			* AddRemoveHeat() is entirely separate from UpdateHeat() and is used by various actions that
+			* modify the player's Heat value. Other examples that use it would be the start of a player
+			* Heat move draining a big chunk of Heat at once or using a Heat restoring item (e.g. Staminan).
+			* Calls to this function always look similar to this:
+			* 
+			* MOV  RAX,qword ptr [PlayerActor] (get address to player's vfTable)
+			* ... (move param1/param2 into RCX/RDX)
+			* CALL qword ptr [RAX + 0x318] (call function at offset x inside vfTable)
+			* 
+			* param2 is indeed an int32_t and not a float like one would expect (since Heat is stored as a float).
+			* Internally this function will convert param2 to a float, check whether the requested amount can be
+			* added/subtracted to/from the current Heat value, execute the addition/subtraction and then return
+			* either 1 (if successful) or 0 (add/subtract failed; mostly when Heat is already full/empty).
+			*/
+			auto addGoldenDragonSpirit = pattern("ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 80 bb");
+			auto addLeechGloves = pattern("ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 85 c0");
+			if (addGoldenDragonSpirit.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: GoldenDragonSpirit");
+				const auto match = addGoldenDragonSpirit.get_one();
+				void *pImmediate = match.get<void>(1); // immediate value for mov edx, immediate
+				uint32_t origValue;
+				memcpy(&origValue, pImmediate, sizeof(origValue));
+				const uint32_t newValue = origValue / integerDiv;
+				memcpy(pImmediate, &newValue, sizeof(newValue));
+			}
+			if (addLeechGloves.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: LeechGloves");
+				const auto match = addLeechGloves.get_one();
+				void *pImmediate = match.get<void>(1); // immediate value for mov edx, immediate
+				uint32_t origValue;
+				memcpy(&origValue, pImmediate, sizeof(origValue));
+				const uint32_t newValue = origValue / integerDiv;
+				memcpy(pImmediate, &newValue, sizeof(newValue));
 			}
 
 
