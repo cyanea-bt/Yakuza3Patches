@@ -43,37 +43,39 @@ namespace utils {
 	//
 	//
 
-
-	static map<int, shared_ptr<spdlog::logger>> logfileMap;
-	static bool logFailed = false;
-
 	// Custom flag with counter that gets incremented after each use
 	// ref: https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
+	template <uint8_t minWidth>
 	class counter_flag final : public spdlog::custom_flag_formatter {
 	public:
-		counter_flag() {}
-		// Would rather have the format string evaluated at compile time but haven't figured out how to do that yet
-		explicit counter_flag(uint8_t padZeros)
-			: padCounter{ padZeros }, fmtCounter{ "{:0" + fmt::format("{:d}", padZeros) + "d}" } {}
-
-		void format(const spdlog::details::log_msg &, const std::tm &, spdlog::memory_buf_t &dest) override
-		{
-			const std::string strCounter = fmt::format(fmt::runtime(fmtCounter), counter++);
+		void format(const spdlog::details::log_msg &, const std::tm &, spdlog::memory_buf_t &dest) override {
+			constexpr auto formatStringBuf = getFormatString(minWidth);
+			const std::string strCounter = fmt::format(formatStringBuf.data(), counter++);
 			dest.append(strCounter.data(), strCounter.data() + strCounter.size());
 		}
 
-		std::unique_ptr<custom_flag_formatter> clone() const override
-		{
-			auto cloned = spdlog::details::make_unique<counter_flag>(padCounter);
+		std::unique_ptr<custom_flag_formatter> clone() const override {
+			auto cloned = spdlog::details::make_unique<counter_flag>();
 			cloned->counter = counter;
 			return cloned;
 		}
 
 	private:
-		uint8_t padCounter = 8;
-		string fmtCounter = "{:08d}";
 		uint64_t counter = 0;
+
+		// evaluate format string at compile time
+		// ref: https://www.reddit.com/r/cpp/comments/kpejif/discussion_on_possibility_of_a_compiletime_printf/ghzdo4f/
+		//      https://stackoverflow.com/a/68207254
+		static consteval auto getFormatString(uint8_t n) {
+			auto buf = std::array<char, 16>();
+			auto result = fmt::format_to(buf.data(), FMT_COMPILE("{{:0{:d}d}}"), n);
+			*result = '\0'; // make sure buf is zero-terminated (should already be the case)
+			return buf;
+		}
 	};
+
+	static map<int, shared_ptr<spdlog::logger>> logfileMap;
+	static bool logFailed = false;
 
 	void Log(string_view msg, const int channel, string_view loggerName) {
 		string filename;
@@ -102,7 +104,7 @@ namespace utils {
 						}
 						else {
 							auto formatter = std::make_unique<spdlog::pattern_formatter>();
-							formatter->add_flag<counter_flag>('*', 8).set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
+							formatter->add_flag<counter_flag<8>>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
 							logfileMap[channel]->set_formatter(std::move(formatter));
 						}
 					}
@@ -140,7 +142,7 @@ namespace utils {
 						}
 						else {
 							auto formatter = std::make_unique<spdlog::pattern_formatter>();
-							formatter->add_flag<counter_flag>('*', 8).set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
+							formatter->add_flag<counter_flag<8>>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
 							logfileMap[channel]->set_formatter(std::move(formatter));
 						}
 					}
