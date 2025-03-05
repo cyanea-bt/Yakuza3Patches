@@ -16,6 +16,61 @@ namespace HeatFix {
 	static GetActorBoolType verifyIsPlayerDrunk = nullptr;
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
 
+	static float GetCurrentHeatValueInAddSubtractHeat(void **playerActor) {
+		// MOV RAX,qword ptr [param_1]
+		// CALL qword ptr [RAX + 0x338]
+		uintptr_t *vfTable = (uintptr_t *)*playerActor;
+		GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
+
+		const float curHeat = GetCurHeat(playerActor);
+		if (isDEBUG) {
+			utils::Log(8,
+				"playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:.3f}",
+				(void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat
+			);
+		}
+		return curHeat;
+	}
+
+
+	typedef uint8_t(*AddSubtractHeatType)(void **, int32_t);
+
+	static uint8_t AddHeatHoldFinisher(void **playerActor, int32_t amount) {
+		uintptr_t *vfTable = (uintptr_t *)*playerActor;
+		const AddSubtractHeatType AddHeat = (AddSubtractHeatType)vfTable[0x318 / sizeof(uintptr_t)];
+		const GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
+		const GetActorFloatType GetMaxHeat = (GetActorFloatType)vfTable[0x340 / sizeof(uintptr_t)];
+
+		// ADD word ptr [RDI + 0x1ab4],AX (decrements value at +0x1ab4 by 1 right before)
+		// Seems to be 120(119 after first -1) when the hold action starts and will be 0 when the max hold duration is reached
+		const uint16_t remainingFrames = *(uint16_t *)((uintptr_t)playerActor + 0x1ab4);
+
+		// VMOVSS XMM1,dword ptr [playerActor + 0x1ab0] (will be converted to int and moved into param2/amount right before)
+		// Seems to always be 8.3333333f during hold combo finishers
+		const float floatAmount = *(float *)((uintptr_t)playerActor + 0x1ab0);
+
+		// Both of the values above get set up by another function
+		// Instructions that set these start at Yakuza3.exe+0x4214aa (Steam version)
+		// Pattern: c5 fa 11 8b b0 1a 00 00
+		// Interestingly that function is used by the player and enemies and is called for pretty
+		// much every attack? In the player's case it seems to set [playerActor + 0x1ab0] to 4.17f
+		// for light hits and 8.33f for heavy hits
+
+		const float heatBefore = GetCurHeat(playerActor);
+		const uint8_t result = AddHeat(playerActor, amount);
+		const float heatAfter = GetCurHeat(playerActor);
+		const float maxHeat = GetMaxHeat(playerActor);
+
+		if (isDEBUG) {
+			utils::Log(9,
+				"remainingFrames: {:d} - floatAmount: {:.3f} - amount: {:d} - maxHeat: {:.3f} - heatBefore: {:.3f} - heatAfter: {:.3f} - result: {:d}",
+				remainingFrames, floatAmount, amount, maxHeat, heatBefore, heatAfter, result
+			);
+		}
+
+		return result;
+	}
+
 	static float GetCurrentHeatValue(void **playerActor) {
 		// MOV RAX,qword ptr [param_1]
 		// CALL qword ptr [RAX + 0x338]
@@ -421,6 +476,8 @@ void OnInitializeHook()
 				utils::Log("", 5, "GetNewHeatValue_2");
 				utils::Log("", 6, "PatchedIsPlayerDrunk");
 				utils::Log("", 7, "PatchedGetDisplayString");
+				utils::Log("", 8, "GetCurrentHeatValueInAddSubtractHeat");
+				utils::Log("", 9, "AddHeatHoldFinisher");
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -488,6 +545,29 @@ void OnInitializeHook()
 
 					WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 					InjectHook(callAddr, space, PATCH_JUMP);
+				}
+
+				// Call to GetCurrentHeatValue() inside AddSubtractHeat()
+				// If this call is reached, Heat value WILL be changed shortly after
+				auto CallGetCurrentHeatValue = pattern("c5 f8 28 f0 ff 90 38 03 00 00 48 8b 83");
+				if (CallGetCurrentHeatValue.count_hint(1).size() == 1) {
+					utils::Log("Found pattern: GetCurrentHeatValueInAddSubtractHeat");
+					const auto match = CallGetCurrentHeatValue.get_one();
+					const void *callAddr = match.get<void>(4);
+					Nop(callAddr, 6);
+					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					InjectHook(callAddr, trampoline->Jump(GetCurrentHeatValueInAddSubtractHeat), PATCH_CALL);
+				}
+
+				// Call to AddSubtractHeat() when holding down combo finishers (e.g. 3xLight hit + holding down Heavy hit)
+				auto CallAddHeat = pattern("c5 fa 2d d1 48 8b cf ff 90 18 03 00 00");
+				if (CallAddHeat.count_hint(1).size() == 1) {
+					utils::Log("Found pattern: AddHeatHoldFinisher");
+					const auto match = CallAddHeat.get_one();
+					const void *callAddr = match.get<void>(7);
+					Nop(callAddr, 6);
+					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					InjectHook(callAddr, trampoline->Jump(AddHeatHoldFinisher), PATCH_CALL);
 				}
 			}
 
@@ -684,12 +764,12 @@ void OnInitializeHook()
 			* ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 80 bb - Heat boost by "Golden Dragon Spirit"
 			* ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 85 c0 - Heat boost by "Leech Gloves"
 			* 
-			* Both call the AddRemoveHeat(void **actor, int32_t chargeAmount) function to continuously
+			* Both call the AddSubtractHeat(void **actor, int32_t chargeAmount) function to continuously
 			* add Heat on every frame while the ability is active. So while holding down the taunt button
 			* for "Golden Dragon Spirit" or while holding onto an enemy for the "Leech Gloves".
 			* Again - I verified these run at twice their intended rate by comparing against the PS3 version.
 			* 
-			* AddRemoveHeat() is entirely separate from UpdateHeat() and is used by various actions that
+			* AddSubtractHeat() is entirely separate from UpdateHeat() and is used by various actions that
 			* modify the player's Heat value. Other examples that use it would be the start of a player
 			* Heat move draining a big chunk of Heat at once or using a Heat restoring item (e.g. Staminan).
 			* Calls to this function always look similar to this:

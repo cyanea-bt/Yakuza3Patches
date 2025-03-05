@@ -8,16 +8,16 @@ namespace EasySpam {
 	typedef uint8_t (*GetEnemyThrowResistanceType)(uintptr_t);
 	static GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 
-	typedef uint8_t (*AddRemoveHeatType)(uintptr_t, int32_t);
-	static AddRemoveHeatType addHeatFunc = nullptr;
+	typedef uint8_t (*AddSubtractHeatType)(uintptr_t, int32_t);
+	static AddSubtractHeatType addHeatFunc = nullptr;
 
 	// param1 here is the address of the player actor object
 	static uint8_t PatchedChargeFeelTheHeat(uintptr_t param1, int32_t oldChargeAmount) {
 		// MOV  RAX,qword ptr [param_1]
 		// CALL qword ptr [RAX + 0x318]
-		uintptr_t pAddRemoveHeat = *(uintptr_t *)(param1);
-		pAddRemoveHeat = *(uintptr_t *)(pAddRemoveHeat + 0x318);
-		const AddRemoveHeatType addHeat = (AddRemoveHeatType)pAddRemoveHeat;
+		uintptr_t pAddSubtractHeat = *(uintptr_t *)(param1);
+		pAddSubtractHeat = *(uintptr_t *)(pAddSubtractHeat + 0x318);
+		const AddSubtractHeatType addHeat = (AddSubtractHeatType)pAddSubtractHeat;
 		if (isDEBUG) {
 			if (addHeat != addHeatFunc) {
 				DebugBreak(); // verify we're calling the correct function
@@ -149,11 +149,11 @@ void OnInitializeHook()
 				enemyThrowResFunc = (GetEnemyThrowResistanceType)match.get<void>();
 			}
 
-			// AddRemoveHeat - to verify we're calling the correct function
+			// AddSubtractHeat - to verify we're calling the correct function
 			auto addHeatPattern = pattern("48 89 5c 24 08 57 48 83 ec 30 48 8b 01 8b fa 48 8b d9 ff 90 20 03 00 00");
 			if (addHeatPattern.count_hint(1).size() == 1) {
 				const auto match = addHeatPattern.get_one();
-				addHeatFunc = (AddRemoveHeatType)match.get<void>();
+				addHeatFunc = (AddSubtractHeatType)match.get<void>();
 			}
 		}
 
@@ -343,7 +343,7 @@ void OnInitializeHook()
 		* ba 82 00 00 00 41 ff 90 18 03 00 00 - Used after chapter 1? Default charge amount is 130
 		* 
 		* During the charge "section" of "Feel the Heat" each press of the charge button will call the
-		* AddRemoveHeat() function in order to add a fixed amount of Heat to the current Heat value.
+		* AddSubtractHeat() function in order to add a fixed amount of Heat to the current Heat value.
 		*/
 		auto chargeFeelTheHeat_1 = pattern("ba 2c 01 00 00 ff 90 18 03 00 00");
 		auto chargeFeelTheHeat_2 = pattern("ba 82 00 00 00 41 ff 90 18 03 00 00");
