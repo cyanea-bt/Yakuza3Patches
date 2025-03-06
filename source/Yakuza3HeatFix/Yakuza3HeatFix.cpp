@@ -13,58 +13,84 @@ namespace HeatFix {
 
 	typedef bool (*GetActorBoolType)(void **);
 	typedef float (*GetActorFloatType)(void **);
+	typedef uint8_t(*AddSubtractHeatType)(void **, int32_t);
 	static GetActorBoolType verifyIsPlayerDrunk = nullptr;
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
-
-	static float GetCurrentHeatValueInAddSubtractHeat(void **playerActor) {
-		// MOV RAX,qword ptr [param_1]
-		// CALL qword ptr [RAX + 0x338]
-		uintptr_t *vfTable = (uintptr_t *)*playerActor;
-		GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
-
-		const float curHeat = GetCurHeat(playerActor);
-		if (isDEBUG) {
-			utils::Log(8,
-				"playerActor: {:p} - vfTable: {:p} - GetCurHeat: {:p} - curHeat: {:.3f}",
-				(void *)playerActor, (void *)vfTable, (void *)GetCurHeat, curHeat
-			);
-		}
-		return curHeat;
-	}
-
-
-	typedef uint8_t(*AddSubtractHeatType)(void **, int32_t);
+	static AddSubtractHeatType verifyAddHeat = nullptr;
 
 	static uint8_t AddHeatHoldFinisher(void **playerActor, int32_t amount) {
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
 		const AddSubtractHeatType AddHeat = (AddSubtractHeatType)vfTable[0x318 / sizeof(uintptr_t)];
 		const GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
 		const GetActorFloatType GetMaxHeat = (GetActorFloatType)vfTable[0x340 / sizeof(uintptr_t)];
+		if (isDEBUG) {
+			if (AddHeat != verifyAddHeat) {
+				DebugBreak(); // should never happen
+				utils::Log("");
+			}
+		}
 
-		// ADD word ptr [RDI + 0x1ab4],AX (decrements value at +0x1ab4 by 1 right before)
-		// Seems to be 120(119 after first -1) when the hold action starts and will be 0 when the max hold duration is reached
-		const uint16_t remainingFrames = *(uint16_t *)((uintptr_t)playerActor + 0x1ab4);
-
-		// VMOVSS XMM1,dword ptr [playerActor + 0x1ab0] (will be converted to int and moved into param2/amount right before)
-		// Seems to always be 8.3333333f during hold combo finishers
+		/*
+		* VMOVSS XMM1,dword ptr [playerActor + 0x1ab0]
+		* (will be converted to int right before the call to this function)
+		* 
+		* floatAmount seems to always be 8.3333333f during hold combo finishers.
+		* Instructions that set this value start at Yakuza3.exe+0x4214aa (Steam version)
+		* Pattern to find it in other versions: c5 fa 11 8b b0 1a 00 00
+		* 
+		* Interestingly that function is used by the player and enemies and is called for pretty
+		* much every attack? In the player's case it seems to set [playerActor + 0x1ab0] to 4.1777f
+		* for light attacks and 8.3333f for heavy attacks.
+		*/
 		const float floatAmount = *(float *)((uintptr_t)playerActor + 0x1ab0);
 
-		// Both of the values above get set up by another function
-		// Instructions that set these start at Yakuza3.exe+0x4214aa (Steam version)
-		// Pattern: c5 fa 11 8b b0 1a 00 00
-		// Interestingly that function is used by the player and enemies and is called for pretty
-		// much every attack? In the player's case it seems to set [playerActor + 0x1ab0] to 4.17f
-		// for light hits and 8.33f for heavy hits
-
 		const float heatBefore = GetCurHeat(playerActor);
-		const uint8_t result = AddHeat(playerActor, amount);
-		const float heatAfter = GetCurHeat(playerActor);
 		const float maxHeat = GetMaxHeat(playerActor);
+		const uint8_t result = AddHeat(playerActor, amount);
+		// Should be safer than trying to check for 8.3333 repeating
+		if (floatAmount > 8.0f && floatAmount < 8.5f) {
+			// result will only be 0 IF Heat is already full before calling AddSubtractHeat()
+			if (result != 0) {
+				// MOV    RAX,qword ptr [playerActor + 0x1510]
+				// VMOVSS dword ptr [RAX + 0x8],XMM3
+				void *pHeatValues = *(void **)((uintptr_t)playerActor + 0x1510);
+				float *pCurHeat = (float *)pHeatValues + (0x8 / sizeof(float));
+				if (isDEBUG) {
+					if (*pCurHeat != GetCurHeat(playerActor)) {
+						DebugBreak(); // should never happen
+						utils::Log("");
+					}
+				}
+
+				/*
+				* Try to add the remaining 0.5f (that got truncated by converting floatAmount to int)
+				* 8.5f (and NOT 8.33f) is the correct value to add here, since the PS3 version adds 17.0f
+				* per frame while running at half of Y3R's framerate. -> 17.0f / 2 = 8.5f
+				* Read further down below (where the call to this function is injected) for more info.
+				*/
+				*pCurHeat = (*pCurHeat + 0.5f) > maxHeat ? maxHeat : (*pCurHeat + 0.5f);
+			}
+		}
+		else if (floatAmount != 10.0f || amount != 10) {
+			// amount can be 10 if using the "Yakuza 3 Rebalanced" mod
+			// amounts other than 8/10 would be news to me, so break here
+			if (isDEBUG) {
+				DebugBreak(); // should never happen
+				utils::Log("");
+			}
+		}
+		const float heatAfter = GetCurHeat(playerActor);
 
 		if (isDEBUG) {
-			utils::Log(9,
-				"remainingFrames: {:d} - floatAmount: {:.3f} - amount: {:d} - maxHeat: {:.3f} - heatBefore: {:.3f} - heatAfter: {:.3f} - result: {:d}",
-				remainingFrames, floatAmount, amount, maxHeat, heatBefore, heatAfter, result
+			const float heatDiff = heatAfter - heatBefore;
+			if (heatAfter > maxHeat) {
+				DebugBreak(); // should never happen
+				utils::Log("");
+			}
+
+			utils::Log(8,
+				"floatAmount: {:.3f} - amount: {:d} - result: {:d} - maxHeat: {:.3f} - heatBefore: {:.3f} - heatAfter: {:.3f} - heatDiff: {:.3f}",
+				floatAmount, amount, result, maxHeat, heatBefore, heatAfter, heatDiff
 			);
 		}
 
@@ -405,7 +431,9 @@ namespace HeatFix {
 			}
 			const uint8_t unkUInt2 = *(uint8_t *)((uintptr_t)playerActor + 0x1a48);
 			if (unkUInt2 > 0x3c) {
-				DebugBreak(); // never happens?
+				// Happens after some enemy throws/hits? Pretty rare though (only seen a few times so far)
+				// Maybe this is the time (in frames) until the player stands up from the ground?
+				//DebugBreak();
 				utils::Log("");
 			}
 			const bool playerGotKnockedDown = (playerStatus == 4) && (unkUInt1 == 0x3) && (unkUInt2 <= 0x3c);
@@ -476,8 +504,7 @@ void OnInitializeHook()
 				utils::Log("", 5, "GetNewHeatValue_2");
 				utils::Log("", 6, "PatchedIsPlayerDrunk");
 				utils::Log("", 7, "PatchedGetDisplayString");
-				utils::Log("", 8, "GetCurrentHeatValueInAddSubtractHeat");
-				utils::Log("", 9, "AddHeatHoldFinisher");
+				utils::Log("", 8, "AddHeatHoldFinisher");
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -547,27 +574,11 @@ void OnInitializeHook()
 					InjectHook(callAddr, space, PATCH_JUMP);
 				}
 
-				// Call to GetCurrentHeatValue() inside AddSubtractHeat()
-				// If this call is reached, Heat value WILL be changed shortly after
-				auto CallGetCurrentHeatValue = pattern("c5 f8 28 f0 ff 90 38 03 00 00 48 8b 83");
-				if (CallGetCurrentHeatValue.count_hint(1).size() == 1) {
-					utils::Log("Found pattern: GetCurrentHeatValueInAddSubtractHeat");
-					const auto match = CallGetCurrentHeatValue.get_one();
-					const void *callAddr = match.get<void>(4);
-					Nop(callAddr, 6);
-					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
-					InjectHook(callAddr, trampoline->Jump(GetCurrentHeatValueInAddSubtractHeat), PATCH_CALL);
-				}
-
-				// Call to AddSubtractHeat() when holding down combo finishers (e.g. 3xLight hit + holding down Heavy hit)
-				auto CallAddHeat = pattern("c5 fa 2d d1 48 8b cf ff 90 18 03 00 00");
-				if (CallAddHeat.count_hint(1).size() == 1) {
-					utils::Log("Found pattern: AddHeatHoldFinisher");
-					const auto match = CallAddHeat.get_one();
-					const void *callAddr = match.get<void>(7);
-					Nop(callAddr, 6);
-					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
-					InjectHook(callAddr, trampoline->Jump(AddHeatHoldFinisher), PATCH_CALL);
+				// AddSubtractHeat - to verify we're calling the correct function
+				auto addHeatPattern = pattern("48 89 5c 24 08 57 48 83 ec 30 48 8b 01 8b fa 48 8b d9 ff 90 20 03 00 00");
+				if (addHeatPattern.count_hint(1).size() == 1) {
+					const auto match = addHeatPattern.get_one();
+					verifyAddHeat = (AddSubtractHeatType)match.get<void>();
 				}
 			}
 
@@ -782,6 +793,9 @@ void OnInitializeHook()
 			* Internally this function will convert param2 to a float, check whether the requested amount can be
 			* added/subtracted to/from the current Heat value, execute the addition/subtraction and then return
 			* either 1 (if successful) or 0 (add/subtract failed; mostly when Heat is already full/empty).
+			* 
+			* Both of these use a hardcoded immediate value for the chargeAmount, so we can simply divide the
+			* original immediate value (i.e. 10 in both cases) by 2 and call it a day.
 			*/
 			auto addGoldenDragonSpirit = pattern("ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 80 bb");
 			auto addLeechGloves = pattern("ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 85 c0");
@@ -802,6 +816,47 @@ void OnInitializeHook()
 				memcpy(&origValue, pImmediate, sizeof(origValue));
 				const uint32_t newValue = origValue / integerDiv;
 				memcpy(pImmediate, &newValue, sizeof(newValue));
+			}
+
+			/*
+			* Call to AddSubtractHeat() when holding down some combo finishers 
+			* (e.g. 3xLight hit + holding down Heavy hit / same for 4xLight hit)
+			* 
+			* If the final hit of one of these combos damages the enemy, the player can keep holding down the
+			* finisher button (i.e. Triangle for PS / Y for XBox) to continuously charge Heat for up to 2 seconds.
+			* This one is pretty interesting because it is the only case of continuous Heat increase that the
+			* Y3R devs actually tried to fix.
+			* 
+			* In the PS3 version the maximum charge duration is 60 frames (i.e. 2 seconds at 30 fps).
+			* In Y3R they doubled this to 120 frames in order to account for the new 60 fps framerate.
+			* So no issues as far as the charge duration goes. Again - keep in mind that Y3R ALWAYS runs
+			* its logic 60 times per second, even if the frame limit is set to 30 fps!
+			* 
+			* In the PS3 version the charge amount per frame is 17.0f, so the correct charge amount for Y3R would
+			* have been 8.5f per frame. Main issue is that AddSubtractHeat() expects its amount parameter as an int32_t.
+			* Meaning the charge amount will be truncated to just 8 per second when Y3R converts it to an integer.
+			* 
+			* Curiously the float that gets converted to an integer right before the call to AddSubtractHeat() in Y3R is
+			* not 8.5f but rather 8.3333f. I don't know why that is the case. Maybe the PS3 version's value was 16.6666f
+			* and it got rounded up to 17 before calling its version of AddSubtractHeat()? Or maybe the PS3 version's
+			* value is actually 17.0f from the get go and the Y3R devs either failed to correctly divide by 2 (unlikely)
+			* or intentionally changed the value from 8.5f to 8.3333f. Though to say for sure without reverse engineering
+			* the PS3 version's binary.
+			* 
+			* What I do know is that the base value that is used for the calculation that results in Y3R's 8.3333f value
+			* seems to originate from somewhere inside the game's "motion/property.bin" file. But that's besides the point
+			* as far as this call to AddSubtractHeat() goes.
+			* Fix is pretty simple - call AddSubtractHeat() just like the game would do on its own and "manually" add the
+			* truncated/missing 0.5f to the current Heat value after AddSubtractHeat() is done.
+			*/
+			auto callAddHeat = pattern("c5 fa 2d d1 48 8b cf ff 90 18 03 00 00");
+			if (callAddHeat.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: HoldComboFinisher");
+				const auto match = callAddHeat.get_one();
+				const void *callAddr = match.get<void>(7);
+				Nop(callAddr, 6);
+				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+				InjectHook(callAddr, trampoline->Jump(AddHeatHoldFinisher), PATCH_CALL);
 			}
 
 
