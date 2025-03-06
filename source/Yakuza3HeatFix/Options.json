@@ -1,53 +1,54 @@
 {
+	"info": "Below you'll find details on which options you can change inside {{CONFIG_FILE}}.\nIf you want to reset all settings to their defaults, simply delete {{CONFIG_FILE}}.\nA new config file with all default values will then be generated the next time you start the game.\nNote that changes in {{CONFIG_FILE}} DON'T apply immediately! You'll have to restart the game.",
 	"options": [
 		{
 			"Name": "Version",
-			"Description": "Don't change this. (Otherwise all your settings will be discarded)",
+			"Description": "Don't change this. Otherwise all your settings will be discarded!",
 			"Default": 1,
 			"Min": 1,
 			"Max": 1
 		},
 		{
 			"Name": "EnablePatch",
-			"Description": "Whether the patch should be enabled.",
-			"Default": true,
+			"Description": "Patch will be enabled if this is set to true.\nNothing will be patched/changed if this is set to false.",
+			"Default": true
 		},
 		{
 			"Name": "IgnoreGameCheck",
-			"Description": "Don't change this unless you have a good reason to do so.",
-			"Default": false,
+			"Description": "By default the patch will check if the game you're running really is Yakuza 3.\nDon't change this unless you have a good reason to do so.",
+			"Default": false
 		},
 		{
 			"Name": "ShowHeatValues",
-			"Description": "Shows the current Heat value and drain timer during combat if set to true.",
-			"Default": false,
+			"Description": "Shows the current Heat value and drain timer during combat if set to true.\nUsed for testing, best to keep this set to false for regular gameplay.",
+			"Default": false
 		},
 		{
 			"Name": "UseOldPatch",
-			"Description": "Whether to use the old (flawed) patch instead of the new one.",
-			"Default": false,
+			"Description": "Set to true to use the old (flawed) patch instead of the new one.\nUsed for testing, best to keep this set to false for regular gameplay.\nNote that the old patch DOESN'T support any of the options below!",
+			"Default": false
 		},
 		{
 			"Name": "DrainTimeMulti",
-			"Description": "Multiplies the time until Heat starts to drain on its own.\nSet to 1 for Yakuza 3 Remastered (bugged/too fast) behavior.\nSet to 2 for Yakuza 3 PS3 behavior.",
+			"Description": "Multiplies the time until Heat starts to drain on its own.\nSet to 1 for Yakuza 3 Remastered behavior. (Drain starts after ~2 seconds)\nSet to 2 for Yakuza 3 PS3 behavior. (Drain starts after ~4 seconds)",
 			"Default": 2,
 			"Min": 1,
 			"Max": 255
 		},
 		{
 			"Name": "DisableHeatDrain",
-			"Description": "Heat will never drain on its own if this is set to true. Heat loss by getting damaged or using a Heat move still applies though.",
-			"Default": false,
+			"Description": "Heat will never drain on its own if this is set to true.\nHeat loss by getting damaged or using Heat moves still applies though.",
+			"Default": false
 		},
 		{
 			"Name": "InfiniteHeat",
 			"Description": "Grants you infinite Heat if set to true.",
-			"Default": false,
+			"Default": false
 		},
 		{
 			"Name": "ZeroHeat",
-			"Description": "Permanently sets your Heat to 0 (empty) if set to true. Will still allow you to charge up \"Feel the Heat\" like normal.",
-			"Default": false,
-		},
+			"Description": "Permanently sets your Heat to 0 (i.e. empty) if set to true.\nWill still allow you to charge up \"Feel the Heat\" like normal.\nInfiniteHeat will take priority over ZeroHeat if both are set to true.",
+			"Default": false
+		}
 	]
 }

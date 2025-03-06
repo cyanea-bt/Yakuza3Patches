@@ -19,7 +19,7 @@ namespace winutils {
 
 		if (!GetModuleHandleExW(dwFlags, static_cast<LPCWSTR>(address), &hm)) {
 			ostringstream oss;
-			oss << "GetModuleHandle returned " << GetLastError();
+			oss << "GetModuleHandleExW returned: " << GetLastError();
 			throw runtime_error(oss.str());
 		}
 		return hm;

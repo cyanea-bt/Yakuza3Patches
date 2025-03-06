@@ -48,7 +48,5 @@ namespace config {
 
 	bool jsonToBool(json::const_reference element, const bool defaultVal);
 	string jsonToString(json::const_reference element, const string &defaultVal);
-	bool writeJson(ostream &os, const json &j);
-	void saveConfig(const fs::path configPath, const Config newConfig);
 	Config loadConfig();
 }
