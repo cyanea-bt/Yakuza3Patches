@@ -1,6 +1,20 @@
 // Microsoft Visual C++ generated resource script.
 //
 
+// Dummy values for Visual Studio's editor (it doesn't see the preprocessor defs and fails to open this file).
+// The resource compiler itself will get the proper values from the commandline definitions and works as expected.
+#ifndef rsc_MajorVersion
+#define rsc_MajorVersion    0
+#define rsc_MinorVersion    0
+#define rsc_RevisionID      0
+#define rsc_BuildID         0
+#define rsc_Repository      "github.com/user/repository"
+#define rsc_FullName        "fullname"
+#define rsc_Name            "name"
+#define rsc_Extension       ".ext"
+#define rsc_Copyright       "2025 cyanea-bt"
+#define rsc_UpdateURL       "github.com/user/repository/releases"
+#endif
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -46,17 +60,17 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION rsc_MajorVersion,rsc_MinorVersion, rsc_RevisionID, rsc_BuildID
- PRODUCTVERSION rsc_MajorVersion,rsc_MinorVersion, rsc_RevisionID, rsc_BuildID
- FILEFLAGSMASK 0x3fL
+FILEVERSION rsc_MajorVersion, rsc_MinorVersion, rsc_RevisionID, rsc_BuildID
+PRODUCTVERSION rsc_MajorVersion, rsc_MinorVersion, rsc_RevisionID, rsc_BuildID
+FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
- FILEFLAGS 0x1L
+FILEFLAGS 0x1L
 #else
- FILEFLAGS 0x0L
+FILEFLAGS 0x0L
 #endif
- FILEOS 0x40004L
- FILETYPE 0x2L
- FILESUBTYPE 0x0L
+FILEOS 0x40004L
+FILETYPE 0x2L
+FILESUBTYPE 0x0L
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
@@ -70,7 +84,7 @@ BEGIN
             VALUE "OriginalFilename", rsc_Name rsc_Extension
             VALUE "ProductName", rsc_Name
             VALUE "ProductVersion", STRINGIZE(rsc_MajorVersion) "." STRINGIZE(rsc_MinorVersion) "." STRINGIZE(rsc_RevisionID) "." STRINGIZE(rsc_BuildID)
-			VALUE "UpdateUrl", rsc_UpdateURL
+            VALUE "UpdateUrl", rsc_UpdateURL
         END
     END
     BLOCK "VarFileInfo"
