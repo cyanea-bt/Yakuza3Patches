@@ -39,4 +39,8 @@ namespace winutils {
 	fs::path GetASIPath() {
 		return get_module_path(get_module_path);
 	}
+
+	void showErrorMessage(string_view msg) {
+		MessageBoxA(NULL, msg.data(), "ERROR", MB_OK | MB_ICONERROR | MB_TASKMODAL);
+	}
 }

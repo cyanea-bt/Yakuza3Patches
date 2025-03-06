@@ -1,4 +1,5 @@
 ﻿#include "utils.h"
+#include "win_utils.h"
 #include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
 
@@ -17,6 +18,39 @@ namespace HeatFix {
 	static GetActorBoolType verifyIsPlayerDrunk = nullptr;
 	static GetActorFloatType verifyGetCurHeat = nullptr, verifyGetMaxHeat = nullptr;
 	static AddSubtractHeatType verifyAddHeat = nullptr;
+
+	// for debugging purposes
+	static uint8_t AddSubtractHeatWrapper(void **playerActor, int32_t amount) {
+		uintptr_t *vfTable = (uintptr_t *)*playerActor;
+		const AddSubtractHeatType AddHeat = (AddSubtractHeatType)vfTable[0x318 / sizeof(uintptr_t)];
+		const GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];
+		const GetActorFloatType GetMaxHeat = (GetActorFloatType)vfTable[0x340 / sizeof(uintptr_t)];
+		if (isDEBUG) {
+			if (AddHeat != verifyAddHeat) {
+				DebugBreak(); // should never happen
+				utils::Log("");
+			}
+		}
+
+		const float heatBefore = GetCurHeat(playerActor);
+		const float maxHeat = GetMaxHeat(playerActor);
+		const uint8_t result = AddHeat(playerActor, amount);
+		const float heatAfter = GetCurHeat(playerActor);
+
+		if (isDEBUG) {
+			const float heatDiff = heatAfter - heatBefore;
+			utils::Log(9,
+				"amount: {:d} - result: {:d} - maxHeat: {:.3f} - heatBefore: {:.3f} - heatAfter: {:.3f} - heatDiff: {:.3f}",
+				amount, result, maxHeat, heatBefore, heatAfter, heatDiff
+			);
+
+			DebugBreak();
+			utils::Log("");
+			winutils::showErrorMessage("AddSubtractHeatWrapper"); // In case I don't have a debugger attached
+		}
+
+		return result;
+	}
 
 	static uint8_t AddHeatHoldFinisher(void **playerActor, int32_t amount) {
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
@@ -505,6 +539,7 @@ void OnInitializeHook()
 				utils::Log("", 6, "PatchedIsPlayerDrunk");
 				utils::Log("", 7, "PatchedGetDisplayString");
 				utils::Log("", 8, "AddHeatHoldFinisher");
+				utils::Log("", 9, "AddSubtractHeatWrapper");
 
 				// GetCurrentHeatValue - verify we're calling the correct function
 				auto getCurHeatPattern = pattern("48 8b 81 10 15 00 00 c5 fa 10 40 08 c3");
@@ -579,6 +614,46 @@ void OnInitializeHook()
 				if (addHeatPattern.count_hint(1).size() == 1) {
 					const auto match = addHeatPattern.get_one();
 					verifyAddHeat = (AddSubtractHeatType)match.get<void>();
+				}
+
+
+				// Don't know when any of these get hit. Hooking them just to be notified if/when they are called.
+				// Of these calls only the 2nd one has any real potential to be buggy (since I don't know its charge amount).
+				auto unkAddSubHeat_1 = pattern("ba 40 ed ff ff 48 8b cf ff 90 18 03 00 00"); // subtracts 4800 Heat
+				auto unkAddSubHeat_2 = pattern("ff 90 18 03 00 00 c5 fc 10 45 80"); // unknown value
+				auto unkAddSubHeat_3 = pattern("41 ff 90 18 03 00 00 b8 01 00 00 00"); // adds 100000, which would immediately max out Heat
+				auto unkAddSubHeat_4 = pattern("49 8b c9 ff 90 18 03 00 00"); // subtracts 100000, which would immediately drain all Heat
+				if (unkAddSubHeat_1.count_hint(1).size() == 1) {
+					utils::Log("Found pattern: unkAddSubHeat_1");
+					const auto match = unkAddSubHeat_1.get_one();
+					const void *callAddr = match.get<void>(8);
+					Nop(callAddr, 6);
+					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					InjectHook(callAddr, trampoline->Jump(AddSubtractHeatWrapper), PATCH_CALL);
+				}
+				if (unkAddSubHeat_2.count_hint(1).size() == 1) {
+					utils::Log("Found pattern: unkAddSubHeat_2");
+					const auto match = unkAddSubHeat_2.get_one();
+					const void *callAddr = match.get<void>(0);
+					Nop(callAddr, 6);
+					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					InjectHook(callAddr, trampoline->Jump(AddSubtractHeatWrapper), PATCH_CALL);
+				}
+				if (unkAddSubHeat_3.count_hint(1).size() == 1) {
+					utils::Log("Found pattern: unkAddSubHeat_3");
+					const auto match = unkAddSubHeat_3.get_one();
+					const void *callAddr = match.get<void>(0);
+					Nop(callAddr, 7);
+					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					InjectHook(callAddr, trampoline->Jump(AddSubtractHeatWrapper), PATCH_CALL);
+				}
+				if (unkAddSubHeat_4.count_hint(1).size() == 1) {
+					utils::Log("Found pattern: unkAddSubHeat_4");
+					const auto match = unkAddSubHeat_4.get_one();
+					const void *callAddr = match.get<void>(3);
+					Nop(callAddr, 6);
+					Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
+					InjectHook(callAddr, trampoline->Jump(AddSubtractHeatWrapper), PATCH_CALL);
 				}
 			}
 
