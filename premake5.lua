@@ -52,7 +52,7 @@ workspace "*"
 	}
 
 	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.cpp", "**/Patterns.h", "**/HookInit.hpp" }
-	files { "source/*.h", "source/*.cpp", "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/resources/*.rc" }
+	files { "source/*.h", "source/*.cpp", "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/resources/*.rc", "source/resources/*.h" }
 	includedirs { "source", "source/%{prj.name}" }
 	externalincludedirs { "3rdparty/json/include", "3rdparty/fmt/include", "3rdparty/spdlog/include" }
 
@@ -71,7 +71,8 @@ workspace "*"
 		"rsc_Game=\"Yakuza 3\"",
 		"rsc_Repository=\"https://github.com/cyanea-bt/Yakuza3Patches\"",
 		"rsc_UpdateURL=\"https://github.com/cyanea-bt/Yakuza3Patches/releases\"",
-		"rsc_Copyright=\"2025 cyanea-bt\""
+		"rsc_Copyright=\"2025 cyanea-bt\"",
+		"rsc_FILE_1=\"Options.json\""
 	}
 
 	newoption {

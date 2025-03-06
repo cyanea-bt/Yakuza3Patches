@@ -1,0 +1,53 @@
+{
+	"options": [
+		{
+			"Name": "Version",
+			"Description": "Don't change this. (Otherwise all your settings will be discarded)",
+			"Default": 1,
+			"Min": 1,
+			"Max": 1
+		},
+		{
+			"Name": "EnablePatch",
+			"Description": "Whether the patch should be enabled.",
+			"Default": true,
+		},
+		{
+			"Name": "IgnoreGameCheck",
+			"Description": "Don't change this unless you have a good reason to do so.",
+			"Default": false,
+		},
+		{
+			"Name": "ShowHeatValues",
+			"Description": "Shows the current Heat value and drain timer during combat if set to true.",
+			"Default": false,
+		},
+		{
+			"Name": "UseOldPatch",
+			"Description": "Whether to use the old (flawed) patch instead of the new one.",
+			"Default": false,
+		},
+		{
+			"Name": "DrainTimeMulti",
+			"Description": "Multiplies the time until Heat starts to drain on its own.\nSet to 1 for Yakuza 3 Remastered (bugged/too fast) behavior.\nSet to 2 for Yakuza 3 PS3 behavior.",
+			"Default": 2,
+			"Min": 1,
+			"Max": 255
+		},
+		{
+			"Name": "DisableHeatDrain",
+			"Description": "Heat will never drain on its own if this is set to true. Heat loss by getting damaged or using a Heat move still applies though.",
+			"Default": false,
+		},
+		{
+			"Name": "InfiniteHeat",
+			"Description": "Grants you infinite Heat if set to true.",
+			"Default": false,
+		},
+		{
+			"Name": "ZeroHeat",
+			"Description": "Permanently sets your Heat to 0 (empty) if set to true. Will still allow you to charge up \"Feel the Heat\" like normal.",
+			"Default": false,
+		},
+	]
+}

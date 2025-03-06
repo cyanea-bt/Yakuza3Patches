@@ -87,6 +87,8 @@ namespace config {
 
 		const Config defaults = Config();
 		try {
+			json jj = winutils::getOptionDescriptions(); // for testing purposes, doesn't do anything useful yet
+
 			Config loaded;
 			if (!fs::exists(configPath)) {
 				// create default config next to .asi file

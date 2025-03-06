@@ -1,20 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
-
-// Dummy values for Visual Studio's editor (it doesn't see the preprocessor defs and fails to open this file).
-// The resource compiler itself will get the proper values from the commandline definitions and works as expected.
-#ifndef rsc_MajorVersion
-#define rsc_MajorVersion    0
-#define rsc_MinorVersion    0
-#define rsc_RevisionID      0
-#define rsc_BuildID         0
-#define rsc_Repository      "github.com/user/repository"
-#define rsc_FullName        "fullname"
-#define rsc_Name            "name"
-#define rsc_Extension       ".ext"
-#define rsc_Copyright       "2025 cyanea-bt"
-#define rsc_UpdateURL       "github.com/user/repository/releases"
-#endif
+#include "resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -27,15 +13,29 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
+// English resources
 
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_PLK)
-LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXT
+//
+
+IDR_TEXT1               TEXT                    rsc_FILE_1
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //
 // TEXTINCLUDE
 //
+
+1 TEXTINCLUDE
+BEGIN
+    "resource.h\0"
+END
 
 2 TEXTINCLUDE 
 BEGIN
@@ -74,7 +74,7 @@ FILESUBTYPE 0x0L
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904b0"
+        BLOCK "040904E4"
         BEGIN
             VALUE "CompanyName", rsc_Repository
             VALUE "FileDescription", rsc_FullName
@@ -89,11 +89,11 @@ BEGIN
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x409, 1200
+        VALUE "Translation", 0x409, 1252
     END
 END
 
-#endif
+#endif // English resources
 /////////////////////////////////////////////////////////////////////////////
 
 
