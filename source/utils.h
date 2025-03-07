@@ -21,6 +21,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/counter_flag_formatter.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/basic_lazy_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #ifdef __INTELLISENSE__

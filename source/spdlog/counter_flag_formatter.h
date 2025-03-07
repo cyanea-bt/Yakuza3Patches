@@ -1,14 +1,10 @@
 #pragma once
-
-#ifndef FMT_COMPILE_H_
 #include <fmt/compile.h>
-#endif
-
-#ifndef SPDLOG_H
 #include <spdlog/spdlog.h>
-#endif
-
 #include <spdlog/pattern_formatter.h>
+#include <array>
+#include <string>
+
 
 namespace spdlog {
 	// Custom flag with counter that gets incremented after each use
