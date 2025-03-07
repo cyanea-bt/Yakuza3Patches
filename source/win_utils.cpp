@@ -33,7 +33,7 @@ namespace winutils {
 		return fs::path(p);
 	}
 
-	static HMODULE GetDLLHandle() {
+	static HMODULE GetASIHandle() {
 		return get_module_handle(get_module_handle);
 	}
 
@@ -69,7 +69,7 @@ namespace winutils {
 	public:
 		Resource() = default;
 		Resource(int resource_id, const std::wstring &resource_class) {
-			HMODULE hm = GetDLLHandle();
+			HMODULE hm = GetASIHandle();
 			hResource = FindResourceW(hm, MAKEINTRESOURCEW(resource_id), resource_class.data());
 			if (!hResource) {
 				throw runtime_error("Failed to find resource!");

@@ -1,3 +1,22 @@
 {
-	"options": []
+	"info": "Below you'll find details on options that you can change inside {{CONFIG_FILE}}.\nIf you want to reset all settings to their defaults, simply delete {{CONFIG_FILE}}.\nA new config file with all default values will then be generated the next time you start the game.\nNote that changes in {{CONFIG_FILE}} DON'T apply immediately! You'll have to restart the game.",
+	"options": [
+		{
+			"Name": "Version",
+			"Description": "Don't change this. Otherwise all your settings will be discarded!",
+			"Default": 1,
+			"Min": 1,
+			"Max": 1
+		},
+		{
+			"Name": "EnablePatch",
+			"Description": "Patch will be enabled if this is set to true.\nNothing will be patched/changed if this is set to false.",
+			"Default": true
+		},
+		{
+			"Name": "IgnoreGameCheck",
+			"Description": "By default the patch will check if the game you're running really is Yakuza 3.\nDon't change this unless you have a good reason to do so.",
+			"Default": false
+		}
+	]
 }

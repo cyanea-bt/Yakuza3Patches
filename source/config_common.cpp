@@ -92,21 +92,24 @@ namespace config {
 				const uint64_t min = element["Min"];
 				const uint64_t max = element["Max"];
 				ofs << fmt::format("Default value:    {:d}\n", def);
-				ofs << fmt::format("Supported values: {:d} - {:d}\n", min, max);
+				ofs << fmt::format("Minimum value:    {:d}\n", min);
+				ofs << fmt::format("Maximum value:    {:d}\n", max);
 			}
 			else if (element["Default"].is_number_integer()) {
 				const int64_t def = element["Default"];
 				const int64_t min = element["Min"];
 				const int64_t max = element["Max"];
 				ofs << fmt::format("Default value:    {:d}\n", def);
-				ofs << fmt::format("Supported values: {:d} - {:d}\n", min, max);
+				ofs << fmt::format("Minimum value:    {:d}\n", min);
+				ofs << fmt::format("Maximum value:    {:d}\n", max);
 			}
 			else if (element["Default"].is_number_float()) {
 				const float def = element["Default"];
 				const float min = element["Min"];
 				const float max = element["Max"];
 				ofs << fmt::format("Default value:    {:.2f}\n", def);
-				ofs << fmt::format("Supported values: {:.2f} - {:.2f}\n", min, max);
+				ofs << fmt::format("Minimum value:    {:.2f}\n", min);
+				ofs << fmt::format("Maximum value:    {:.2f}\n", max);
 			}
 			ofs << endl;
 		}
