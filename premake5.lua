@@ -52,7 +52,9 @@ workspace "*"
 	}
 
 	files { "**/MemoryMgr.h", "**/Trampoline.h", "**/Patterns.cpp", "**/Patterns.h", "**/HookInit.hpp" }
-	files { "source/*.h", "source/*.cpp", "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp", "source/resources/*.rc", "source/resources/*.h" }
+	files { "source/*.h", "source/*.cpp", "source/%{prj.name}/*.h", "source/%{prj.name}/*.cpp" }
+	files { "source/resources/*.rc", "source/resources/*.h" }
+	files { "source/spdlog/**.h" }
 	includedirs { "source", "source/%{prj.name}" }
 	externalincludedirs { "3rdparty/json/include", "3rdparty/fmt/include", "3rdparty/spdlog/include" }
 

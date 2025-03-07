@@ -16,6 +16,7 @@ namespace utils {
 
 	static const auto tz = current_zone();
 	static constexpr auto tzFmt = FMT_COMPILE("{:%Y/%m/%d %H:%M:%S}");
+	static constexpr auto tzFileFmt = FMT_COMPILE("{:%Y.%m.%d_%H-%M-%S}");
 
 	string UTCString() {
 		const auto utcNow = system_clock::now();
@@ -39,40 +40,31 @@ namespace utils {
 		return fmt::format(tzFmt, tzNow);
 	}
 
+	string UTCFilename() {
+		const auto utcNow = system_clock::now();
+		return fmt::format(tzFileFmt, floor<seconds>(utcNow));
+	}
+
+	string UTCFilename_ms() {
+		const auto utcNow = system_clock::now();
+		return fmt::format(tzFileFmt, utcNow);
+	}
+
+	string TzFilename() {
+		const auto utcNow = system_clock::now();
+		const auto tzNow = tz->to_local(utcNow);
+		return fmt::format(tzFileFmt, floor<seconds>(tzNow));
+	}
+
+	string TzFilename_ms() {
+		const auto utcNow = system_clock::now();
+		const auto tzNow = tz->to_local(utcNow);
+		return fmt::format(tzFileFmt, tzNow);
+	}
+
 	//
 	//
 	//
-
-	// Custom flag with counter that gets incremented after each use
-	// ref: https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
-	template <uint8_t minWidth>
-	class counter_flag final : public spdlog::custom_flag_formatter {
-	public:
-		void format(const spdlog::details::log_msg &, const std::tm &, spdlog::memory_buf_t &dest) override {
-			constexpr auto formatStringBuf = getFormatString(minWidth);
-			const std::string strCounter = fmt::format(formatStringBuf.data(), counter++);
-			dest.append(strCounter.data(), strCounter.data() + strCounter.size());
-		}
-
-		std::unique_ptr<custom_flag_formatter> clone() const override {
-			auto cloned = spdlog::details::make_unique<counter_flag>();
-			cloned->counter = counter;
-			return cloned;
-		}
-
-	private:
-		uint64_t counter = 0;
-
-		// evaluate format string at compile time
-		// ref: https://www.reddit.com/r/cpp/comments/kpejif/discussion_on_possibility_of_a_compiletime_printf/ghzdo4f/
-		//      https://stackoverflow.com/a/68207254
-		static consteval auto getFormatString(uint8_t n) {
-			auto buf = std::array<char, 16>();
-			auto result = fmt::format_to(buf.data(), FMT_COMPILE("{{:0{:d}d}}"), n);
-			*result = '\0'; // make sure buf is zero-terminated (should already be the case)
-			return buf;
-		}
-	};
 
 	static map<int, shared_ptr<spdlog::logger>> s_LogfileMap;
 	static bool s_LogFailed = false;
@@ -101,7 +93,7 @@ namespace utils {
 				}
 				else {
 					auto formatter = std::make_unique<spdlog::pattern_formatter>();
-					formatter->add_flag<counter_flag<8>>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
+					formatter->add_flag<spdlog::counter_flag<8>>('*').set_pattern("[%Y/%m/%d %H:%M:%S.%e][%n][%*] %v");
 					s_LogfileMap[channel]->set_formatter(std::move(formatter));
 				}
 			}

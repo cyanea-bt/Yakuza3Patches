@@ -19,7 +19,7 @@
 #include <fmt/std.h>
 #include <fmt/os.h>
 #include <spdlog/spdlog.h>
-#include <spdlog/pattern_formatter.h>
+#include <spdlog/counter_flag_formatter.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -38,6 +38,10 @@ namespace utils {
 	std::string UTCString_ms();
 	std::string TzString();
 	std::string TzString_ms();
+	std::string UTCFilename();
+	std::string UTCFilename_ms();
+	std::string TzFilename();
+	std::string TzFilename_ms();
 	void Log(std::string_view msg, const int channel = -1, std::string_view loggerName = {});
 	void Log(std::string_view msg, const bool close, const int channel = -1, std::string_view loggerName = {});
 

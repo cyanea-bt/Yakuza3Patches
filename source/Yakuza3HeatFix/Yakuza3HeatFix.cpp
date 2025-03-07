@@ -493,7 +493,7 @@ namespace HeatFix {
 			}
 
 			if (incomingDamage == 0 && newHeatVal <= oldHeatVal && heatDiff != expectedDiff) {
-				DebugBreak();
+				DebugBreak(); // Will sometimes be hit in between moves?
  				utils::Log("");
 			}
 
@@ -918,9 +918,13 @@ void OnInitializeHook()
 			* or intentionally changed the value from 8.5f to 8.3333f. Though to say for sure without reverse engineering
 			* the PS3 version's binary.
 			* 
-			* What I do know is that the base value that is used for the calculation that results in Y3R's 8.3333f value
-			* seems to originate from somewhere inside the game's "motion/property.bin" file. But that's besides the point
-			* as far as this call to AddSubtractHeat() goes.
+			* What I do know is that the base value which is used for the calculation that results in Y3R's 8.3333f value
+			* seems to originate from somewhere inside the game's "motion/property.bin" file. Or at least that's what I thought.
+			* But "property.bin" and "ActionSet.cas" are literally 100% IDENTICAL betweeen Y3 PS3 and (unmodified) Y3R. So maybe
+			* the difference comes from somewhere else entirely? It's just that the "Yakuza 3 Rebalanced" mod modifies exactly
+			* these 2 files and it does indeed change the 8.3333f value for 3xLight hit + Finisher to 10.0f.
+			* But either way - that's besides the point as far as this call to AddSubtractHeat() goes.
+			* 
 			* Fix is pretty simple - call AddSubtractHeat() just like the game would do on its own and "manually" add the
 			* truncated/missing 0.5f to the current Heat value after AddSubtractHeat() is done.
 			*/
