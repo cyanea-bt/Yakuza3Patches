@@ -8,9 +8,9 @@ project "Yakuza3HeatFix"
 
 	defines { 
 	    "rsc_FullName=\"Yakuza3HeatFix\"",
-	    "rsc_MajorVersion=0",
-	    "rsc_MinorVersion=0",
-	    "rsc_RevisionID=1",
+	    "rsc_MajorVersion=2025",
+	    "rsc_MinorVersion=3",
+	    "rsc_RevisionID=9",
 	    "rsc_BuildID=0",
 	}
 

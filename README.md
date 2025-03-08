@@ -12,13 +12,13 @@ into account. So whenever something was supposed to happen once per frame at 30 
 on PS3, there's a pretty good chance that it is messed up in Y3R. That is why Heat drain starts after about  
 half the time it takes on PS3 and also why the drain rate is twice of what it is on PS3.  
   
-An earlier version of my patch tried to fix these issues by limiting the function, that is responsible for  
-most of them, to 30 updates a second. This worked well enough as far as the drain rate goes but it certainly  
-wasn't without issues. What I didn't know at the time was that there are several sources of Heat gain/drain  
-that are only "active" for a single frame. E.g. if the player hit the enemy on a frame where the Heat function  
-was skipped by my patch, the corresponding Heat update wouldn't happen and the player wouldn't gain  
-any Heat for that hit. This goes both ways btw - if the enemy hit the player on a skipped frame the player  
-wouldn't lose any Heat for being hit.  
+An earlier version of my patch tried to fix these issues by limiting the function, that is responsible for most of  
+them, to 30 updates a second. This worked well enough as far as the drain rate goes but it wasn't without issues.  
+What I didn't know at the time was that there are several sources of Heat gain/drain that are only "active" for a  
+single frame. E.g. if the player hit the enemy on a frame where the Heat function was skipped by my patch, the  
+corresponding Heat update wouldn't happen and the player wouldn't gain any Heat for that hit. This goes both  
+ways btw - if the enemy hit the player on a skipped frame the player wouldn't lose any Heat for being hit. So at  
+least it was "fair" I guess but certainly not accurate to the PS3 version.  
   
 There really wasn't a good way to fix these issues while limiting the Heat updates to 30 times per second.  
 In the end I decided to rewrite my patch from scratch in order to fix all the 60 fps related flaws in Y3R's  
@@ -37,13 +37,13 @@ Other versions might work as well, YMMV.
 `6c688b51650fa2e9be39e1d934e872602ee54799` `Yakuza3.exe (GOG)`  
   
 ## Configuration
-The new version of my patch has support for some user-configurable settings. I obviously recommend sticking  
-with the defaults but the option's there if you want it. After you run the game for the first time with my patch  
-installed/enabled, 2 files will be generated in the patch's directory (`mods\Yakuza3HeatFix`).  
+Patch versions `2025.03.09` or later have support for some user-configurable settings. I obviously recommend  
+sticking with the defaults but the option's there if you want it. After running the game for the first time with my  
+patch installed/enabled, 2 files will be generated in the patch's directory (`mods\Yakuza3HeatFix`).  
   
 `Yakuza3HeatFix_Info.txt` will contain some information about each option and its supported values.  
   
-`Yakuza3HeatFix.json` is the configuration file in which you can edit these settings. Simply open it in any  
+`Yakuza3HeatFix.json` is the configuration file in which you can change these options. Simply open it in any  
 text editor (e.g. Notepad) and change what you want to change. Remember to save after you're done and then  
 restart the game if it is already running. If you try to use any invalid settings or mess up the configuration file  
 in some other way, the option(s) will be reset to their defaults.  

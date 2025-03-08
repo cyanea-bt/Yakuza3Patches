@@ -1,4 +1,4 @@
 ﻿Name: Yakuza3HeatFix
 Author: cyanea-bt
-Version: 2025.02.06
-Description: "Patch that attempts to fix Heat related issues (draining too early/too fast) in Y3R."
+Version: 2025.03.09
+Description: "Patch that fixes a multitude of Heat related issues in Y3R:\n- Heat drain starting too soon after gaining Heat/hitting an enemy\n- Heat dropping too quickly once it starts to drain\n- Heat gain from some equipment not matching the PS3 version\n- Heat gain from some abilities not matching the PS3 version\n- Heat gain from long press combo finishers not matching the PS3 version\n\nWhile I very much recommend sticking with the default settings, patch versions 2025.03.09 or later have support for some user-configurable options. After running the game with my patch enabled, 2 files will appear in the mod's directory:\n\n\"Yakuza3HeatFix_Info.txt\" will contain some information about each option.\n\"Yakuza3HeatFix.json\" is the configuration file in which you can change these options."
