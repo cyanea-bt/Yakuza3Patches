@@ -46,7 +46,7 @@ namespace HeatFix {
 		return result;
 	}
 
-	uint8_t AddHeatHoldFinisher(void **playerActor, int32_t amount) {
+	uint8_t AddHeatComboFinisher(void **playerActor, int32_t amount) {
 		uintptr_t *vfTable = (uintptr_t *)*playerActor;
 		const AddSubtractHeatType AddHeat = (AddSubtractHeatType)vfTable[0x318 / sizeof(uintptr_t)];
 		const GetActorFloatType GetCurHeat = (GetActorFloatType)vfTable[0x338 / sizeof(uintptr_t)];

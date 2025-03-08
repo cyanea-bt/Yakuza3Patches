@@ -19,7 +19,7 @@ namespace HeatFix {
 	bool PatchedIsPlayerDrunk(void **playerActor, const float newHeatVal, const uint16_t newDrainTimer);
 	uint8_t AddSubtractHeatWrapper(void **playerActor, int32_t amount);
 	uint16_t GetNewHeatDrainTimer(void **playerActor, const uint16_t curDrainTimer);
-	uint8_t AddHeatHoldFinisher(void **playerActor, int32_t amount);
+	uint8_t AddHeatComboFinisher(void **playerActor, int32_t amount);
 	float GetNewHeatValue(void **playerActor, const float newHeatVal, const float baseDrainRate, const uint16_t newDrainTimer);
 	float GetMaxHeatValue(void **playerActor);
 	char *PatchedGetDisplayString(void *param1, uint32_t param2, uint32_t param3);

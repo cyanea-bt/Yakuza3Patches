@@ -36,19 +36,19 @@
 			"Max": 255
 		},
 		{
-			"Name": "DisableHeatDrain",
-			"Description": "Heat will never drain on its own if this is set to true.\nHeat loss by getting damaged or using Heat moves still applies though.",
-			"Default": false
-		},
-		{
 			"Name": "FixHeatDrain",
-			"Description": "Set to true for Yakuza 3 PS3 Heat drain.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat drain.",
+			"Description": "Set to true for Yakuza 3 PS3 Heat drain amounts.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat drain amounts.",
 			"Default": true
 		},
 		{
 			"Name": "FixHeatGain",
-			"Description": "Set to true for Yakuza 3 PS3 Heat gain.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat gain.",
+			"Description": "Set to true for Yakuza 3 PS3 Heat gain amounts.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat gain amounts.",
 			"Default": true
+		},
+		{
+			"Name": "DisableHeatDrain",
+			"Description": "Heat will never drain on its own if this is set to true.\nHeat loss by getting damaged or using Heat moves will still happen though.",
+			"Default": false
 		},
 		{
 			"Name": "InfiniteHeat",

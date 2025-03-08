@@ -14,9 +14,9 @@ namespace config {
 		j["ShowHeatValues"] = e.ShowHeatValues;
 		j["UseOldPatch"] = e.UseOldPatch;
 		j["DrainTimeMulti"] = e.DrainTimeMulti;
-		j["DisableHeatDrain"] = e.DisableHeatDrain;
 		j["FixHeatDrain"] = e.FixHeatDrain;
 		j["FixHeatGain"] = e.FixHeatGain;
+		j["DisableHeatDrain"] = e.DisableHeatDrain;
 		j["InfiniteHeat"] = e.InfiniteHeat;
 		j["ZeroHeat"] = e.ZeroHeat;
 	}
@@ -29,9 +29,9 @@ namespace config {
 		e.ShowHeatValues = jsonToBool(j.at("ShowHeatValues"), defaults.ShowHeatValues);
 		e.UseOldPatch = jsonToBool(j.at("UseOldPatch"), defaults.UseOldPatch);
 		e.DrainTimeMulti = jsonToNumber<uint8_t>(j.at("DrainTimeMulti"), 1, defaults.DrainTimeMulti);
-		e.DisableHeatDrain = jsonToBool(j.at("DisableHeatDrain"), defaults.DisableHeatDrain);
 		e.FixHeatDrain = jsonToBool(j.at("FixHeatDrain"), defaults.FixHeatDrain);
 		e.FixHeatGain = jsonToBool(j.at("FixHeatGain"), defaults.FixHeatGain);
+		e.DisableHeatDrain = jsonToBool(j.at("DisableHeatDrain"), defaults.DisableHeatDrain);
 		e.InfiniteHeat = jsonToBool(j.at("InfiniteHeat"), defaults.InfiniteHeat);
 		e.ZeroHeat = jsonToBool(j.at("ZeroHeat"), defaults.ZeroHeat);
 		if (json test = e; test != j) {
@@ -41,18 +41,7 @@ namespace config {
 		}
 	}
 
-	//
-	//
-	//
-
-	static Config s_Config;
-	static bool s_ConfigLoaded = false;
-
 	Config GetConfig() {
-		if (!s_ConfigLoaded) {
-			s_Config = loadConfig();
-			s_ConfigLoaded = true;
-		}
-		return s_Config;
+		return loadConfig();
 	}
 }

@@ -39,6 +39,7 @@ namespace Yakuza3 {
 				utils::Log("");
 			}
 		}
+
 		// Get config from file
 		CONFIG = config::GetConfig();
 

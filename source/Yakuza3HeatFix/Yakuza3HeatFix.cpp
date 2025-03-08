@@ -33,7 +33,7 @@ void OnInitializeHook()
 				utils::Log("", 5, "GetNewHeatValue_2");
 				utils::Log("", 6, "PatchedIsPlayerDrunk");
 				utils::Log("", 7, "PatchedGetDisplayString");
-				utils::Log("", 8, "AddHeatHoldFinisher");
+				utils::Log("", 8, "AddHeatComboFinisher");
 				utils::Log("", 9, "AddSubtractHeatWrapper");
 
 				// GetCurrentHeatValue - verify we're calling the correct function
@@ -423,14 +423,14 @@ void OnInitializeHook()
 			* Fix is pretty simple - call AddSubtractHeat() just like the game would do on its own and "manually" add the
 			* truncated/missing 0.5f to the current Heat value after AddSubtractHeat() is done.
 			*/
-			auto addComboFinisher = pattern("c5 fa 2d d1 48 8b cf ff 90 18 03 00 00");
-			if (CONFIG.FixHeatGain && addComboFinisher.count_hint(1).size() == 1) {
-				utils::Log("Found pattern: ComboFinisher");
-				const auto match = addComboFinisher.get_one();
+			auto addLongPressComboFinisher = pattern("c5 fa 2d d1 48 8b cf ff 90 18 03 00 00");
+			if (CONFIG.FixHeatGain && addLongPressComboFinisher.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: LongPressComboFinisher");
+				const auto match = addLongPressComboFinisher.get_one();
 				const void *callAddr = match.get<void>(7);
 				Nop(callAddr, 6);
 				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
-				InjectHook(callAddr, trampoline->Jump(AddHeatHoldFinisher), PATCH_CALL);
+				InjectHook(callAddr, trampoline->Jump(AddHeatComboFinisher), PATCH_CALL);
 			}
 
 

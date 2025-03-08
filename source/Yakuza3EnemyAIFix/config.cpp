@@ -25,18 +25,7 @@ namespace config {
 		}
 	}
 
-	//
-	//
-	//
-
-	static Config s_Config;
-	static bool s_ConfigLoaded = false;
-
 	Config GetConfig() {
-		if (!s_ConfigLoaded) {
-			s_Config = loadConfig();
-			s_ConfigLoaded = true;
-		}
-		return s_Config;
+		return loadConfig();
 	}
 }
