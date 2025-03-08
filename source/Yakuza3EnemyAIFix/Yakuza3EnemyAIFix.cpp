@@ -1,3 +1,7 @@
+//
+// Nothing to see here yet. Still in research stage.
+//
+
 #include "utils.h"
 #include "Yakuza3.h"
 
@@ -45,5 +49,5 @@ void OnInitializeHook()
 	}
 
 	// log current time to file to get some feedback once hook is done
-	Yakuza3::Done("Hook done!");
+	Yakuza3::Finalize("Hook done!");
 }

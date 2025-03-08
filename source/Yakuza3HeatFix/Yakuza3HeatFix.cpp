@@ -444,7 +444,7 @@ void OnInitializeHook()
 			*/
 			auto finalHeatCalc = pattern("c5 e2 5f f2 ff 90 40 03 00 00");
 			if (finalHeatCalc.count_hint(1).size() == 1) {
-				utils::Log("Found pattern: FinalHeatCalc");
+				utils::Log("Found pattern: UpdateHeat");
 				const auto match = finalHeatCalc.get_one();
 				const void *callAddr = match.get<void>(4);
 				const void *retAddr = match.get<void>(10);
@@ -523,5 +523,5 @@ void OnInitializeHook()
 	}
 
 	// log current time to file to get some feedback once hook is done
-	Yakuza3::Done("Hook done!");
+	Yakuza3::Finalize("Hook done!");
 }

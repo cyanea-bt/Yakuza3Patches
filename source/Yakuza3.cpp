@@ -73,21 +73,21 @@ namespace Yakuza3 {
 		// Check if patch should be disabled
 		if ((game != Game::Yakuza3 && !CONFIG.IgnoreGameCheck) || !CONFIG.EnablePatch) {
 			if (game != Game::Yakuza3) {
-				Done(fmt::format("Game is NOT {:s}, {:s} was disabled!", rsc_Game, rsc_Name));
+				Finalize(fmt::format("Game is NOT {:s}, {:s} was disabled!", rsc_Game, rsc_Name));
 			}
 			else {
-				Done(fmt::format("{:s} was disabled!", rsc_Name));
+				Finalize(fmt::format("{:s} was disabled!", rsc_Name));
 			}
 			return false;
 		}
 		return true;
 	}
 
-	void Done(string_view finalMsg) {
+	void Finalize(string_view finalMsg) {
 		// log current time to file to get some feedback once hook is done
 		utils::Log(finalMsg);
-		utils::Log(fmt::format("\nConfig path: \"{:s}\"", CONFIG.path));
-		utils::Log(fmt::format("Local time:     {:s}", utils::TzString()));
-		utils::Log(fmt::format("UTC time:       {:s}", utils::UTCString()), true);
+		utils::Log(fmt::format("\nConfig path:   \"{:s}\"", CONFIG.path));
+		utils::Log(fmt::format("Local time:    {:s}", utils::TzString()));
+		utils::Log(fmt::format("UTC time:      {:s}", utils::UTCString()), true);
 	}
 }

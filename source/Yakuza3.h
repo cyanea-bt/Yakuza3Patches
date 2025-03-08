@@ -19,5 +19,5 @@ inline config::Config CONFIG;
 
 namespace Yakuza3 {
 	bool Init();
-	void Done(std::string_view finalMsg);
+	void Finalize(std::string_view finalMsg);
 }

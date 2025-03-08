@@ -1,4 +1,8 @@
-﻿#include "utils.h"
+﻿//
+// WIP patch, not ready for release.
+//
+
+#include "utils.h"
 #include "Yakuza3.h"
 
 
@@ -366,5 +370,5 @@ void OnInitializeHook()
 	}
 
 	// log current time to file to get some feedback once hook is done
-	Yakuza3::Done("Hook done!");
+	Yakuza3::Finalize("Hook done!");
 }

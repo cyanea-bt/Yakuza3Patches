@@ -15,7 +15,7 @@ namespace utils {
 	using namespace std::chrono;
 
 	static const auto tz = current_zone();
-	static constexpr auto tzFmt = FMT_COMPILE("{:%Y/%m/%d %H:%M:%S}");
+	static constexpr auto tzFmt = FMT_COMPILE("{:%Y/%m/%d - %H:%M:%S}");
 	static constexpr auto tzFileFmt = FMT_COMPILE("{:%Y.%m.%d_%H-%M-%S}");
 
 	string UTCString() {
