@@ -10,7 +10,11 @@ namespace config {
 	using json = nlohmann::ordered_json;
 
 	template<typename T>
-	T jsonToNumber(json::const_reference element, const T minVal, const T defaultVal) {
+	T jsonToNumber(const json &jsonData, string_view jsonKeyVal, const T minVal, const T defaultVal) {
+		if (!jsonData.contains(jsonKeyVal)) {
+			return defaultVal;
+		}
+		const auto element = jsonData[jsonKeyVal];
 		T retVal;
 		const T MAX = numeric_limits<T>::max();
 		const T MIN = numeric_limits<T>::min();
@@ -46,7 +50,7 @@ namespace config {
 		return retVal;
 	}
 
-	bool jsonToBool(json::const_reference element, const bool defaultVal);
-	string jsonToString(json::const_reference element, const string &defaultVal);
+	bool jsonToBool(const json &jsonData, string_view jsonKeyVal, const bool defaultVal);
+	string jsonToString(const json &jsonData, string_view jsonKeyVal, const string &defaultVal);
 	Config loadConfig();
 }

@@ -23,17 +23,17 @@ namespace config {
 
 	void from_json(const json &j, Config &e) {
 		const Config defaults = Config();
-		e.Version = jsonToNumber<uint32_t>(j.at("Version"), 1, defaults.Version);
-		e.EnablePatch = jsonToBool(j.at("EnablePatch"), defaults.EnablePatch);
-		e.IgnoreGameCheck = jsonToBool(j.at("IgnoreGameCheck"), defaults.IgnoreGameCheck);
-		e.ShowHeatValues = jsonToBool(j.at("ShowHeatValues"), defaults.ShowHeatValues);
-		e.UseOldPatch = jsonToBool(j.at("UseOldPatch"), defaults.UseOldPatch);
-		e.DrainTimeMulti = jsonToNumber<uint8_t>(j.at("DrainTimeMulti"), 1, defaults.DrainTimeMulti);
-		e.FixHeatDrain = jsonToBool(j.at("FixHeatDrain"), defaults.FixHeatDrain);
-		e.FixHeatGain = jsonToBool(j.at("FixHeatGain"), defaults.FixHeatGain);
-		e.DisableHeatDrain = jsonToBool(j.at("DisableHeatDrain"), defaults.DisableHeatDrain);
-		e.InfiniteHeat = jsonToBool(j.at("InfiniteHeat"), defaults.InfiniteHeat);
-		e.ZeroHeat = jsonToBool(j.at("ZeroHeat"), defaults.ZeroHeat);
+		e.Version = jsonToNumber<uint32_t>(j, "Version", 1, defaults.Version);
+		e.EnablePatch = jsonToBool(j, "EnablePatch", defaults.EnablePatch);
+		e.IgnoreGameCheck = jsonToBool(j, "IgnoreGameCheck", defaults.IgnoreGameCheck);
+		e.ShowHeatValues = jsonToBool(j, "ShowHeatValues", defaults.ShowHeatValues);
+		e.UseOldPatch = jsonToBool(j, "UseOldPatch", defaults.UseOldPatch);
+		e.DrainTimeMulti = jsonToNumber<uint8_t>(j, "DrainTimeMulti", 1, defaults.DrainTimeMulti);
+		e.FixHeatDrain = jsonToBool(j, "FixHeatDrain", defaults.FixHeatDrain);
+		e.FixHeatGain = jsonToBool(j, "FixHeatGain", defaults.FixHeatGain);
+		e.DisableHeatDrain = jsonToBool(j, "DisableHeatDrain", defaults.DisableHeatDrain);
+		e.InfiniteHeat = jsonToBool(j, "InfiniteHeat", defaults.InfiniteHeat);
+		e.ZeroHeat = jsonToBool(j, "ZeroHeat", defaults.ZeroHeat);
 		if (json test = e; test != j) {
 			// Check if the converted config values differ from those in the JSON file.
 			// If input JSON contained invalid values, we should overwrite the config file.

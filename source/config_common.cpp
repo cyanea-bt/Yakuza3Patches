@@ -11,7 +11,11 @@ namespace config {
 	namespace fs = std::filesystem;
 	using json = nlohmann::ordered_json;
 
-	bool jsonToBool(json::const_reference element, const bool defaultVal) {
+	bool jsonToBool(const json &jsonData, string_view jsonKeyVal, const bool defaultVal) {
+		if (!jsonData.contains(jsonKeyVal)) {
+			return defaultVal;
+		}
+		const auto element = jsonData[jsonKeyVal];
 		bool retVal;
 		if (element.is_boolean()) {
 			element.get_to(retVal);
@@ -37,7 +41,11 @@ namespace config {
 		return retVal;
 	}
 
-	string jsonToString(json::const_reference element, const string &defaultVal) {
+	string jsonToString(const json &jsonData, string_view jsonKeyVal, const string &defaultVal) {
+		if (!jsonData.contains(jsonKeyVal)) {
+			return defaultVal;
+		}
+		const auto element = jsonData[jsonKeyVal];
 		string retVal;
 		if (element.is_string()) {
 			element.get_to(retVal);
@@ -47,6 +55,10 @@ namespace config {
 		}
 		return retVal;
 	}
+
+	//
+	//
+	//
 
 	// write prettified JSON to ostream
 	static bool writeJson(ostream &os, const json &j) {
@@ -59,10 +71,6 @@ namespace config {
 		os.flush();
 		return !os.fail();
 	}
-
-	//
-	//
-	//
 
 	static void exportDescriptions(const fs::path descPath) {
 		json j = json::parse(winutils::getOptionDescriptions());
@@ -133,8 +141,10 @@ namespace config {
 
 
 	Config loadConfig() {
+		// Try to find config file in current working directory
 		fs::path configPath(fmt::format("{:s}{:s}", rsc_Name, ".json"));
 		if (!fs::exists(configPath)) {
+			// Otherwise try to find config file in mod directory
 			const fs::path asiDir = winutils::GetASIPath().parent_path();
 			configPath = fs::path(asiDir / configPath.filename());
 		}
@@ -143,7 +153,7 @@ namespace config {
 		try {
 			Config loaded;
 			if (!fs::exists(configPath)) {
-				// create default config next to .asi file
+				// no config exists, so create default config next to .asi file
 				saveConfig(configPath, defaults);
 				loaded = defaults;
 			}
@@ -165,7 +175,7 @@ namespace config {
 					}
 				}
 				else {
-					// replace outdated config file with new defaults
+					// replace outdated/invalid config file with new defaults
 					saveConfig(configPath, defaults);
 					loaded = defaults;
 				}
