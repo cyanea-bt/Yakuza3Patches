@@ -74,7 +74,7 @@ namespace spdlog {
 
 		private:
 			filename_t filename_;
-			bool truncate_;
+			bool truncate_ = false;
 			details::file_helper file_helper_;
 			bool fopen_failed_ = false;
 			bool initialized_ = false;

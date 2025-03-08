@@ -201,8 +201,11 @@ namespace HeatFix {
 			if (newHeatVal != oldHeatVal && newDrainTimer != 0) {
 				// AFAIK - Heat value should be unchanged at this point, unless player and enemy hit each other on the same frame
 				// In that rare case (newDrainTimer) should be == 0, since the player hitting the enemy resets it to 0.
-				DebugBreak();
-				utils::Log("");
+				DbgBreak();
+				spdlog::error(
+					"{:s} - oldHeatVal: {:.3f} - newHeatVal: {:.3f} - newDrainTimer: {:d}",
+					"PatchedIsPlayerDrunk", oldHeatVal, newHeatVal, newDrainTimer
+				);
 			}
 
 			utils::Log(6,
@@ -370,8 +373,8 @@ namespace HeatFix {
 			if (incomingDamage == 0) {
 				if (isDEBUG) {
 					if (newDrainTimer != MAX_DrainTimer || baseDrainRate == 0.0f) {
-						DebugBreak(); // should never happen
-						utils::Log("");
+						DbgBreak(); // should never happen
+						spdlog::error("{:s} - newDrainTimer: {:d} - baseDrainRate: {:.3f}", "GetNewHeatValue_1", newDrainTimer, baseDrainRate);
 					}
 				}
 
@@ -433,7 +436,9 @@ namespace HeatFix {
 			case 19:
 				utils::Log(""); break; // player uses taunt
 			default:
-				DebugBreak(); utils::Log(""); break;
+				DbgBreak();
+				spdlog::warn("{:s} - isDrunk: {} - playerStatus: {:d}", "GetNewHeatValue_2", isDrunk, playerStatus);
+				break;
 			}
 
 			// CMP  byte ptr [RBX + 0x1a49],0x3
@@ -441,6 +446,7 @@ namespace HeatFix {
 			// CMP  byte ptr [RBX + 0x1a48],0x3c
 			// JA  +0x05
 			const uint8_t unkUInt1 = *(uint8_t *)((uintptr_t)playerActor + 0x1a49);
+			const uint8_t unkUInt2 = *(uint8_t *)((uintptr_t)playerActor + 0x1a48);
 			if (unkUInt1 == 0) { // default value?
 				utils::Log("");
 			}
@@ -460,15 +466,14 @@ namespace HeatFix {
 				utils::Log("");
 			}
 			else if (unkUInt1 > 4 && unkUInt1 != 8) {
-				DebugBreak();
-				utils::Log("");
+				DbgBreak();
+				spdlog::warn("{:s} - unkUInt1: {:d} - unkUInt2: {:d}", "GetNewHeatValue_3", unkUInt1, unkUInt2);
 			}
-			const uint8_t unkUInt2 = *(uint8_t *)((uintptr_t)playerActor + 0x1a48);
 			if (unkUInt2 > 0x3c) {
 				// Happens after some enemy throws/hits? Pretty rare though (only seen a few times so far)
-				// Maybe this is the time (in frames) until the player stands up from the ground?
-				//DebugBreak();
-				utils::Log("");
+				// Seems to be the time (in frames) until the player stands up from the ground?
+				DbgBreak();
+				spdlog::warn("{:s} - unkUInt1: {:d} - unkUInt2: {:d}", "GetNewHeatValue_4", unkUInt1, unkUInt2);
 			}
 			const bool playerGotKnockedDown = (playerStatus == 4) && (unkUInt1 == 0x3) && (unkUInt2 <= 0x3c);
 			if (playerStatus == 4) {
@@ -493,8 +498,11 @@ namespace HeatFix {
 			}
 
 			if (incomingDamage == 0 && newHeatVal <= oldHeatVal && heatDiff != expectedDiff) {
-				DebugBreak(); // Will sometimes be hit in between moves?
- 				utils::Log("");
+				DbgBreak(); // Will sometimes be hit in between moves?
+				spdlog::warn(
+					"{:s} - oldHeatVal: {:.3f} - newHeatVal: {:.3f} - heatDiff: {:.3f} - retHeatVal: {:.3f} - incomingDamage: {:d} - baseDrainRate: {:.3f} - newDrainTimer: {:d}", 
+					"GetNewHeatValue_5", oldHeatVal, newHeatVal, heatDiff, retHeatVal, incomingDamage, baseDrainRate, newDrainTimer
+				);
 			}
 
 			utils::Log(5,
