@@ -239,7 +239,7 @@ void OnInitializeHook()
 			*/
 			auto addRescueCard = pattern("c5 32 58 0d 57 49 81 00 e9");
 			auto addPhoenixSpirit = pattern("c5 32 58 0d 4d 3c 81 00 e9");
-			if (addRescueCard.count_hint(1).size() == 1) {
+			if (CONFIG.FixHeatGain && addRescueCard.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: RescueCard");
 				const auto match = addRescueCard.get_one();
 				const void *addAddr = match.get<void>(0);
@@ -273,7 +273,7 @@ void OnInitializeHook()
 				WriteOffsetValue(space + sizeof(payload) - 4, retAddr);
 				InjectHook(addAddr, space + 4, PATCH_JUMP); // first instruction of payload starts at offset +4
 			}
-			if (addPhoenixSpirit.count_hint(1).size() == 1) {
+			if (CONFIG.FixHeatGain && addPhoenixSpirit.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: PhoenixSpirit");
 				const auto match = addPhoenixSpirit.get_one();
 				const void *addAddr = match.get<void>(0);
@@ -313,7 +313,7 @@ void OnInitializeHook()
 			* Same issue as the the 2 above - charging rate in Y3R is twice of the intended/PS3 rate.
 			*/
 			auto addLotusFlare = pattern("75 0d c4 c1 78 28 f8 0f b7 fe c4 41 32 58 cb");
-			if (addLotusFlare.count_hint(1).size() == 1) {
+			if (CONFIG.FixHeatGain && addLotusFlare.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: TrueLotusFlareFist");
 				const auto match = addLotusFlare.get_one();
 				const void *addAddr = match.get<void>(10);
@@ -369,7 +369,7 @@ void OnInitializeHook()
 			*/
 			auto addGoldenDragonSpirit = pattern("ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 80 bb");
 			auto addLeechGloves = pattern("ba 0a 00 00 00 48 8b cb ff 90 18 03 00 00 85 c0");
-			if (addGoldenDragonSpirit.count_hint(1).size() == 1) {
+			if (CONFIG.FixHeatGain && addGoldenDragonSpirit.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: GoldenDragonSpirit");
 				const auto match = addGoldenDragonSpirit.get_one();
 				void *pImmediate = match.get<void>(1); // immediate value for mov edx, immediate
@@ -378,7 +378,7 @@ void OnInitializeHook()
 				const uint32_t newValue = origValue / integerDiv;
 				memcpy(pImmediate, &newValue, sizeof(newValue));
 			}
-			if (addLeechGloves.count_hint(1).size() == 1) {
+			if (CONFIG.FixHeatGain && addLeechGloves.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: LeechGloves");
 				const auto match = addLeechGloves.get_one();
 				void *pImmediate = match.get<void>(1); // immediate value for mov edx, immediate
@@ -423,10 +423,10 @@ void OnInitializeHook()
 			* Fix is pretty simple - call AddSubtractHeat() just like the game would do on its own and "manually" add the
 			* truncated/missing 0.5f to the current Heat value after AddSubtractHeat() is done.
 			*/
-			auto callAddHeat = pattern("c5 fa 2d d1 48 8b cf ff 90 18 03 00 00");
-			if (callAddHeat.count_hint(1).size() == 1) {
-				utils::Log("Found pattern: HoldComboFinisher");
-				const auto match = callAddHeat.get_one();
+			auto addComboFinisher = pattern("c5 fa 2d d1 48 8b cf ff 90 18 03 00 00");
+			if (CONFIG.FixHeatGain && addComboFinisher.count_hint(1).size() == 1) {
+				utils::Log("Found pattern: ComboFinisher");
+				const auto match = addComboFinisher.get_one();
 				const void *callAddr = match.get<void>(7);
 				Nop(callAddr, 6);
 				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
@@ -445,9 +445,9 @@ void OnInitializeHook()
 			auto finalHeatCalc = pattern("c5 e2 5f f2 ff 90 40 03 00 00");
 			if (finalHeatCalc.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: FinalHeatCalc");
-				auto match = finalHeatCalc.get_one();
-				void *callAddr = match.get<void>(4);
-				void *retAddr = match.get<void>(10);
+				const auto match = finalHeatCalc.get_one();
+				const void *callAddr = match.get<void>(4);
+				const void *retAddr = match.get<void>(10);
 				Trampoline *trampoline = Trampoline::MakeTrampoline(callAddr);
 				// Nop this instruction:
 				// 0xff, 0x90, 0x40, 0x03, 0x00, 0x00 (CALL qword ptr [RAX + 0x340])
@@ -489,11 +489,11 @@ void OnInitializeHook()
 				std::byte *space = trampoline->RawSpace(sizeof(payload));
 				memcpy(space, payload, sizeof(payload));
 
-				auto pGetNewHeatValue = utils::GetFuncAddr(GetNewHeatValue);
+				const auto pGetNewHeatValue = utils::GetFuncAddr(GetNewHeatValue);
 				// 3 + 3 + 3 + 2 = 11
 				memcpy(space + 11, &pGetNewHeatValue, sizeof(pGetNewHeatValue));
 
-				auto pGetMaxHeatValue = utils::GetFuncAddr(GetMaxHeatValue);
+				const auto pGetMaxHeatValue = utils::GetFuncAddr(GetMaxHeatValue);
 				// 5 + 2 + 8 = 15
 				memcpy(space + sizeof(payload) - 15, &pGetMaxHeatValue, sizeof(pGetMaxHeatValue));
 

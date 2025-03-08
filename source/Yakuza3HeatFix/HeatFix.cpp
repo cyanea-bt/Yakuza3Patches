@@ -362,7 +362,7 @@ namespace HeatFix {
 		* function here, Heat gain will already have been handled/corrected.
 		*/
 		float retHeatVal = newHeatVal;
-		if (newHeatVal < oldHeatVal) {
+		if (CONFIG.FixHeatDrain && newHeatVal < oldHeatVal) {
 			if (incomingDamage == 0) {
 				if (isDEBUG) {
 					if (newDrainTimer != MAX_DrainTimer || baseDrainRate == 0.0f) {

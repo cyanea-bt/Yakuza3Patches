@@ -15,6 +15,8 @@ namespace config {
 		j["UseOldPatch"] = e.UseOldPatch;
 		j["DrainTimeMulti"] = e.DrainTimeMulti;
 		j["DisableHeatDrain"] = e.DisableHeatDrain;
+		j["FixHeatDrain"] = e.FixHeatDrain;
+		j["FixHeatGain"] = e.FixHeatGain;
 		j["InfiniteHeat"] = e.InfiniteHeat;
 		j["ZeroHeat"] = e.ZeroHeat;
 	}
@@ -28,6 +30,8 @@ namespace config {
 		e.UseOldPatch = jsonToBool(j.at("UseOldPatch"), defaults.UseOldPatch);
 		e.DrainTimeMulti = jsonToNumber<uint8_t>(j.at("DrainTimeMulti"), 1, defaults.DrainTimeMulti);
 		e.DisableHeatDrain = jsonToBool(j.at("DisableHeatDrain"), defaults.DisableHeatDrain);
+		e.FixHeatDrain = jsonToBool(j.at("FixHeatDrain"), defaults.FixHeatDrain);
+		e.FixHeatGain = jsonToBool(j.at("FixHeatGain"), defaults.FixHeatGain);
 		e.InfiniteHeat = jsonToBool(j.at("InfiniteHeat"), defaults.InfiniteHeat);
 		e.ZeroHeat = jsonToBool(j.at("ZeroHeat"), defaults.ZeroHeat);
 		if (json test = e; test != j) {

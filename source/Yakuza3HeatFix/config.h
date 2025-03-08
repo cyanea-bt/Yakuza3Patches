@@ -15,6 +15,8 @@ namespace config {
 		bool UseOldPatch = false;
 		uint8_t DrainTimeMulti = 2; // valid range: 1-255
 		bool DisableHeatDrain = false;
+		bool FixHeatDrain = true;
+		bool FixHeatGain = true;
 		bool InfiniteHeat = false;
 		bool ZeroHeat = false;
 	};

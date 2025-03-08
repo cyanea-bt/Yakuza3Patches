@@ -41,6 +41,16 @@
 			"Default": false
 		},
 		{
+			"Name": "FixHeatDrain",
+			"Description": "Set to true for Yakuza 3 PS3 Heat drain.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat drain.",
+			"Default": true
+		},
+		{
+			"Name": "FixHeatGain",
+			"Description": "Set to true for Yakuza 3 PS3 Heat gain.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat gain.",
+			"Default": true
+		},
+		{
 			"Name": "InfiniteHeat",
 			"Description": "Grants you infinite Heat if set to true.",
 			"Default": false
