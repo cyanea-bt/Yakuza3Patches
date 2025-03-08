@@ -20,7 +20,7 @@
 		},
 		{
 			"Name": "ShowHeatValues",
-			"Description": "Shows the current Heat value and drain timer during combat if set to true.\nUsed for testing, best to keep this set to false for regular gameplay.",
+			"Description": "Shows the current Heat value and drain timer during combat if set to true.\nUsed for testing, best to keep this set to false for regular gameplay.\nNote that the maximum drain timer will always be 115 (for technical reasons).\nTo get around that limitation this patch instead increases the time between each increment.",
 			"Default": false
 		},
 		{
