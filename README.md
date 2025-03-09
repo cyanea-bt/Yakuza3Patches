@@ -46,7 +46,7 @@ patch installed/enabled, 2 files will be generated in the patch's directory (`mo
 `Yakuza3HeatFix.json` is the configuration file in which you can change these options. Simply open it in any  
 text editor (e.g. Notepad) and change what you want to change. Remember to save after you're done and then  
 restart the game if it is already running. If you try to use any invalid settings or mess up the configuration file  
-in some other way, the option(s) will be reset to their defaults.  
+in some other way, the options will be reset to their defaults.  
   
 ## Install
 This mod is compatible with [ShinRyuModManager](https://github.com/SRMM-Studio/ShinRyuModManager), so simply download and install like all other SRMM mods.  

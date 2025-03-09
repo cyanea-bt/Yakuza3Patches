@@ -31,8 +31,6 @@
 #include "string_utils.h"
 #include "win_utils.h"
 
-// Avoids crashes if no debugger is attached.
-#define DbgBreak() { if (IsDebuggerPresent()) { DebugBreak(); } }
 // I kinda hate this but I couldn't find a better solution
 // ref: https://stackoverflow.com/a/73512139
 #define cformat(fmt, ...) format(FMT_COMPILE(fmt), ##__VA_ARGS__)

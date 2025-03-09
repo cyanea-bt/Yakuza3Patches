@@ -1,3 +1,4 @@
+#pragma once
 #ifndef RESOURCESRC_H
 #define RESOURCESRC_H
 

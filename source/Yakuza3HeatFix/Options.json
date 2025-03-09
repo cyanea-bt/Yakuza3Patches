@@ -1,5 +1,5 @@
 {
-	"info": "Below you'll find details on options that you can change inside {{CONFIG_FILE}}.\nIf you want to reset all settings to their defaults, simply delete {{CONFIG_FILE}}.\nA new config file with all default values will then be generated the next time you start the game.\nNote that changes in {{CONFIG_FILE}} DON'T apply immediately! You'll have to restart the game.",
+	"info": "Below you'll find details on options that you can change inside {{CONFIG_FILE}}.\nIf you try to use invalid values or mess up in another way, the options will be reset to their defaults.\nIf you want to reset all settings to their defaults, simply delete {{CONFIG_FILE}}.\nA new config file with all default values will then be generated the next time you start the game.\nNote that changes in {{CONFIG_FILE}} DON'T apply immediately! You'll have to restart the game.",
 	"options": [
 		{
 			"Name": "Version",
@@ -25,7 +25,7 @@
 		},
 		{
 			"Name": "UseOldPatch",
-			"Description": "Set to true to use the old (flawed) patch instead of the new one.\nUsed for testing, best to keep this set to false for regular gameplay.\nNote that the old patch DOESN'T support any of the options below!",
+			"Description": "Set to true to use the old (flawed) patch instead of the new one.\nUsed for testing, best to keep this set to false for regular gameplay.\nNote that the old patch DOESN'T support ANY of the options below!",
 			"Default": false
 		},
 		{
@@ -37,12 +37,12 @@
 		},
 		{
 			"Name": "FixHeatDrain",
-			"Description": "Set to true for Yakuza 3 PS3 Heat drain amounts.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat drain amounts.",
+			"Description": "Set to true for Yakuza 3 PS3 Heat drain rates.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat drain rates.",
 			"Default": true
 		},
 		{
 			"Name": "FixHeatGain",
-			"Description": "Set to true for Yakuza 3 PS3 Heat gain amounts.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat gain amounts.",
+			"Description": "Set to true for Yakuza 3 PS3 Heat gain rates.\nSet to false for Yakuza 3 Remastered (i.e. bugged) Heat gain rates.",
 			"Default": true
 		},
 		{

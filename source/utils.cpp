@@ -1,11 +1,6 @@
 #include <map>
+#include "common.h"
 #include "utils.h"
-
-#if _DEBUG
-static constexpr bool isDEBUG = true;
-#else
-static constexpr bool isDEBUG = false;
-#endif // _DEBUG
 
 
 namespace utils {
