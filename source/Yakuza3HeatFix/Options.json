@@ -33,7 +33,7 @@
 			"Description": "Multiplies the time until Heat starts to drain on its own.\nSet to 1 for Yakuza 3 Remastered behavior. (Drain starts after ~2 seconds)\nSet to 2 for Yakuza 3 PS3 behavior. (Drain starts after ~4 seconds)",
 			"Default": 2,
 			"Min": 1,
-			"Max": 255
+			"Max": 200
 		},
 		{
 			"Name": "FixHeatDrain",

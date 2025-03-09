@@ -15,7 +15,7 @@ namespace config {
 
 	void from_json(const json &j, Config &e) {
 		const Config defaults = Config();
-		e.Version = jsonToNumber<uint32_t>(j, "Version", 1, defaults.Version);
+		e.Version = jsonToNumber<uint32_t>(j, "Version", 1, 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j, "EnablePatch", defaults.EnablePatch);
 		e.IgnoreGameCheck = jsonToBool(j, "IgnoreGameCheck", defaults.IgnoreGameCheck);
 		if (json test = e; test != j) {

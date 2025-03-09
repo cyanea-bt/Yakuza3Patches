@@ -19,13 +19,13 @@ namespace config {
 
 	void from_json(const json &j, Config &e) {
 		const Config defaults = Config();
-		e.Version = jsonToNumber<uint32_t>(j, "Version", 1, defaults.Version);
+		e.Version = jsonToNumber<uint32_t>(j, "Version", 1, 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j, "EnablePatch", defaults.EnablePatch);
 		e.IgnoreGameCheck = jsonToBool(j, "IgnoreGameCheck", defaults.IgnoreGameCheck);
-		e.ThrowEnemy = jsonToNumber<uint8_t>(j, "ThrowEnemy", 1, defaults.ThrowEnemy);
-		e.EnemyThrowResIncrease = jsonToNumber<uint8_t>(j, "EnemyThrowResIncrease", 0, defaults.EnemyThrowResIncrease);
-		e.EscapeEnemyGrab = jsonToNumber<uint8_t>(j, "EscapeEnemyGrab", 1, defaults.EscapeEnemyGrab);
-		e.ChargeFeelTheHeat = jsonToNumber<uint8_t>(j, "ChargeFeelTheHeat", 1, defaults.ChargeFeelTheHeat);
+		e.ThrowEnemy = jsonToNumber<uint8_t>(j, "ThrowEnemy", 1, 200, defaults.ThrowEnemy);
+		e.EnemyThrowResIncrease = jsonToNumber<uint8_t>(j, "EnemyThrowResIncrease", 0, 200, defaults.EnemyThrowResIncrease);
+		e.EscapeEnemyGrab = jsonToNumber<uint8_t>(j, "EscapeEnemyGrab", 1, 200, defaults.EscapeEnemyGrab);
+		e.ChargeFeelTheHeat = jsonToNumber<uint8_t>(j, "ChargeFeelTheHeat", 1, 200, defaults.ChargeFeelTheHeat);
 		if (json test = e; test != j) {
 			// Check if the converted config values differ from those in the JSON file.
 			// If input JSON contained invalid values, we should overwrite the config file.

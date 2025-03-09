@@ -1,3 +1,4 @@
+#pragma once
 #pragma warning(push) // fmtlib/spdlog warnings
 #pragma warning(disable : 6294)
 #pragma warning(disable : 26495)

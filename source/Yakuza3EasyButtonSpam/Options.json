@@ -23,28 +23,28 @@
 			"Description": "Higher values will make it easier to throw enemies who try to resist your throws.\nSet to 1 for the game's default behavior.\nSet to 2 to halve the required button presses.\nSet to 3 for a third, to 4 for a quarter, you get the idea.",
 			"Default": 2,
 			"Min": 1,
-			"Max": 255
+			"Max": 200
 		},
 		{
 			"Name": "EnemyThrowResIncrease",
 			"Description": "By default the game will increase the enemy's throw resistance by 1 after each throw.\nSo after 5 throws you will need 5 additional button presses to throw the enemy a 6th time.\nSet this to 0 if you want the enemy's throw resistance to always stay the same.",
 			"Default": 1,
 			"Min": 0,
-			"Max": 255
+			"Max": 200
 		},
 		{
 			"Name": "EscapeEnemyGrab",
 			"Description": "Higher values will make it easier to escape an enemy's grab.\nSet to 1 for the game's default behavior.\nSet to 2 to halve the required button presses.\nSet to 3 for a third, to 4 for a quarter, you get the idea.",
 			"Default": 2,
 			"Min": 1,
-			"Max": 255
+			"Max": 200
 		},
 		{
 			"Name": "ChargeFeelTheHeat",
 			"Description": "Higher values will make it easier to charge up Heat during \"Feel the Heat\".\nSet to 1 for the game's default behavior.\nSet to 2 to halve the required button presses.\nSet to 3 for a third, to 4 for a quarter, you get the idea.",
 			"Default": 2,
 			"Min": 1,
-			"Max": 255
+			"Max": 200
 		}
 	]
 }

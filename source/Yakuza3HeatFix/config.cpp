@@ -23,12 +23,12 @@ namespace config {
 
 	void from_json(const json &j, Config &e) {
 		const Config defaults = Config();
-		e.Version = jsonToNumber<uint32_t>(j, "Version", 1, defaults.Version);
+		e.Version = jsonToNumber<uint32_t>(j, "Version", 1, 1, defaults.Version);
 		e.EnablePatch = jsonToBool(j, "EnablePatch", defaults.EnablePatch);
 		e.IgnoreGameCheck = jsonToBool(j, "IgnoreGameCheck", defaults.IgnoreGameCheck);
 		e.ShowHeatValues = jsonToBool(j, "ShowHeatValues", defaults.ShowHeatValues);
 		e.UseOldPatch = jsonToBool(j, "UseOldPatch", defaults.UseOldPatch);
-		e.DrainTimeMulti = jsonToNumber<uint8_t>(j, "DrainTimeMulti", 1, defaults.DrainTimeMulti);
+		e.DrainTimeMulti = jsonToNumber<uint8_t>(j, "DrainTimeMulti", 1, 200, defaults.DrainTimeMulti);
 		e.FixHeatDrain = jsonToBool(j, "FixHeatDrain", defaults.FixHeatDrain);
 		e.FixHeatGain = jsonToBool(j, "FixHeatGain", defaults.FixHeatGain);
 		e.DisableHeatDrain = jsonToBool(j, "DisableHeatDrain", defaults.DisableHeatDrain);
