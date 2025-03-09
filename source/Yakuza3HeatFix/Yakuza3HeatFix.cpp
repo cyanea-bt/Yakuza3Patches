@@ -228,16 +228,16 @@ void OnInitializeHook()
 
 
 			/*
-			* c5 32 58 0d 57 49 81 00 e9 - Heat boost by "Rescue Card"
-			* c5 32 58 0d 4d 3c 81 00 e9 - Heat boost by "Phoenix Spirit"
+			* c5 32 58 0d ?? ?? ?? ?? e9 ?? ?? ?? ?? 48 8b - Heat boost by "Rescue Card"
+			* c5 32 58 0d ?? ?? ?? ?? e9 ?? ?? ?? ?? f7 83 - Heat boost by "Phoenix Spirit"
 			* 
 			* Both of these automatically increase Heat while the player's health is at/below 19%.
 			* Both have the same issue - they add a fixed amount of Heat every frame. So in Y3R
 			* (which ALWAYS runs Heat calculations 60 times per second) they increase Heat at twice
 			* their intended rate. Confirmed by comparison with PS3 version.
 			*/
-			auto addRescueCard = pattern("c5 32 58 0d 57 49 81 00 e9");
-			auto addPhoenixSpirit = pattern("c5 32 58 0d 4d 3c 81 00 e9");
+			auto addRescueCard = pattern("c5 32 58 0d ? ? ? ? e9 ? ? ? ? 48 8b");
+			auto addPhoenixSpirit = pattern("c5 32 58 0d ? ? ? ? e9 ? ? ? ? f7 83");
 			if (CONFIG.FixHeatGain && addRescueCard.count_hint(1).size() == 1) {
 				utils::Log("Found pattern: RescueCard");
 				const auto match = addRescueCard.get_one();
