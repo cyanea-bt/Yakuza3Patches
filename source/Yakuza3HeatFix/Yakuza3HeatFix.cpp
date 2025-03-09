@@ -1,5 +1,4 @@
 ﻿#include "utils.h"
-#include "win_utils.h"
 #include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
 

@@ -1,5 +1,5 @@
 #pragma once
-#pragma warning(push) // fmtlib/spdlog warnings
+#pragma warning(push) // fmtlib/spdlog Intellisense warnings
 #pragma warning(disable : 6294)
 #pragma warning(disable : 26495)
 #pragma warning(disable : 26498)
@@ -12,7 +12,6 @@
 #endif
 #define FMT_HEADER_ONLY
 #define SPDLOG_HEADER_ONLY
-#include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 #include <fmt/compile.h>
@@ -29,6 +28,8 @@
 #pragma diag_default 1574, 2500
 #endif
 #pragma warning(pop)
+#include "string_utils.h"
+#include "win_utils.h"
 
 // Avoids crashes if no debugger is attached.
 #define DbgBreak() { if (IsDebuggerPresent()) { DebugBreak(); } }
@@ -38,24 +39,8 @@
 
 
 namespace utils {
-	std::string UTCString();
-	std::string UTCString_ms();
-	std::string TzString();
-	std::string TzString_ms();
-	std::string UTCFilename();
-	std::string UTCFilename_ms();
-	std::string TzFilename();
-	std::string TzFilename_ms();
 	void Log(std::string_view msg, const int channel = -1, std::string_view loggerName = {});
 	void Log(std::string_view msg, const bool close, const int channel = -1, std::string_view loggerName = {});
-
-	std::string replaceAll(const std::string &str, const std::string &from, const std::string &to);
-	void replaceAllByRef(std::string &str, const std::string &from, const std::string &to);
-	std::string_view ltrim(std::string_view str);
-	std::string_view rtrim(std::string_view str);
-	std::string_view trim(std::string_view str);
-	std::string lowercase(std::string_view str);
-	std::string uppercase(std::string_view str);
 
 	// Can't seem to get the correct address of a function at runtime without this
 	// ref: Utils/Trampoline.h

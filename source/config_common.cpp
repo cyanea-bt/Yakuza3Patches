@@ -3,7 +3,6 @@
 #include "config.h"
 #include "config_common.h"
 #include "utils.h"
-#include "win_utils.h"
 
 
 namespace config {
