@@ -2,14 +2,12 @@
 #include "fmtlib_headers.h"
 
 
-// I kinda hate this but I couldn't find a better solution
-// ref: https://stackoverflow.com/a/73512139
-#define cformat(fmt, ...) format(FMT_COMPILE(fmt), ##__VA_ARGS__)
-
-
 namespace utils {
-	void Log(std::string_view msg, const int channel = -1, std::string_view loggerName = {});
-	void Log(std::string_view msg, const bool close, const int channel = -1, std::string_view loggerName = {});
+	using std::string;
+	using std::string_view;
+
+	void Log(string_view msg, const int channel = -1, string_view loggerName = {});
+	void Log(string_view msg, const bool close, const int channel = -1, string_view loggerName = {});
 
 	// Can't seem to get the correct address of a function at runtime without this
 	// ref: Utils/Trampoline.h

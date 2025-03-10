@@ -5,7 +5,7 @@
 
 
 namespace LegacyHeatFix {
-	using namespace std;
+	using std::string;
 	/*
 	* Parameter types aren't correct but it shouldn't matter for our purposes.
 	* param1 is probably a pointer to the player actor object
@@ -177,7 +177,6 @@ namespace LegacyHeatFix {
 
 
 	void InitPatch() {
-		using namespace std;
 		using namespace Memory;
 		using namespace hook;
 

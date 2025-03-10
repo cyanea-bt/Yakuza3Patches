@@ -6,9 +6,9 @@
 
 
 namespace utils {
-	using namespace std;
+	using std::map;
 
-	static map<int, shared_ptr<spdlog::logger>> s_LogfileMap;
+	static map<int, std::shared_ptr<spdlog::logger>> s_LogfileMap;
 	static bool s_LogFailed = false;
 
 	void CreateLogger(const int channel, string_view loggerName, const bool truncate) {

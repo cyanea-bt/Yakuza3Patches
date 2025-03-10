@@ -7,17 +7,16 @@
 
 
 namespace EnemyAIFix {
-	using namespace std;
+
 }
 
 
 void OnInitializeHook()
 {
-	using namespace std;
 	using namespace Memory;
 	using namespace hook;
 
-	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
+	std::unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 
 	// Check if patch should be disabled
 	if (!Yakuza3::Init()) {

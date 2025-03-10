@@ -3,7 +3,6 @@
 
 
 namespace config {
-	using namespace std;
 	using json = nlohmann::ordered_json;
 
 	void to_json(json &j, const Config &e) {

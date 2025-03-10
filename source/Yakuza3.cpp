@@ -1,3 +1,4 @@
+#include <vector>
 #include "Yakuza3.h"
 #include "utils.h"
 #include "string_utils.h"
@@ -6,30 +7,31 @@
 
 
 namespace Yakuza3 {
-	using namespace std;
+	using std::string;
+	using std::vector;
 	using namespace hook;
 	using namespace Memory;
 
 	bool Init() {
 		// Replace default spdlog logger
 		try {
-			const auto stdout_sink = make_shared<spdlog::sinks::stdout_color_sink_mt>();
+			const auto stdout_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 			stdout_sink->set_level(spdlog::level::info);
 			vector<spdlog::sink_ptr> sinks;
 			sinks.push_back(stdout_sink);
 			if (isDEBUG) {
 				// MSVC debug sink
-				const auto msvc_sink = make_shared<spdlog::sinks::msvc_sink_mt>();
+				const auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
 				msvc_sink->set_level(spdlog::level::trace);
 				sinks.push_back(msvc_sink);
 				// logfile for debug warnings/errors
 				const string filename = fmt::format("{:s}_{:s}.txt", rsc_Name, utils::TzFilename());
-				const auto error_sink = make_shared<spdlog::sinks::basic_lazy_file_sink_mt>(filename);
+				const auto error_sink = std::make_shared<spdlog::sinks::basic_lazy_file_sink_mt>(filename);
 				error_sink->set_level(spdlog::level::warn);
 				error_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e][%l] %v");
 				sinks.push_back(error_sink);
 			}			
-			const auto combined_logger = make_shared<spdlog::logger>(rsc_Name, begin(sinks), end(sinks));
+			const auto combined_logger = std::make_shared<spdlog::logger>(rsc_Name, begin(sinks), end(sinks));
 			combined_logger->set_level(spdlog::level::trace);
 			combined_logger->flush_on(spdlog::level::trace); // always flush immediately, no matter the log level
 			spdlog::set_default_logger(combined_logger);

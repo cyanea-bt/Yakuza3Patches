@@ -1,5 +1,7 @@
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <ostream>
 #include "config.h"
 #include "config_common.h"
 #include "utils.h"
@@ -9,7 +11,9 @@
 
 
 namespace config {
-	using namespace std;
+	using std::ios;
+	using std::ifstream;
+	using std::ofstream;
 	namespace fs = std::filesystem;
 	using json = nlohmann::ordered_json;
 
@@ -63,13 +67,13 @@ namespace config {
 	//
 
 	// write prettified JSON to ostream
-	static bool writeJson(ostream &os, const json &j) {
+	static bool writeJson(std::ostream &os, const json &j) {
 		const auto old_width = os.width();
 		// dump() produces warning C28020 and doesn't seem fixable? Probably a false positive anyways.
 		// So suppress warning for 1 line
 		// ref: https://stackoverflow.com/a/25447795
 #pragma warning(suppress: 28020)
-		os << setw(4) << j << endl << setw(old_width);
+		os << std::setw(4) << j << std::endl << std::setw(old_width);
 		os.flush();
 		return !os.fail();
 	}
@@ -121,7 +125,7 @@ namespace config {
 				ofs << fmt::format("Minimum value:    {:.2f}\n", min);
 				ofs << fmt::format("Maximum value:    {:.2f}\n", max);
 			}
-			ofs << endl;
+			ofs << std::endl;
 		}
 	}
 
@@ -191,12 +195,12 @@ namespace config {
 			try {
 				saveConfig(configPath, defaults);
 			}
-			catch (const exception &err) {
+			catch (const std::exception &err) {
 				spdlog::error(err.what());
 			}
 			return defaults;
 		}
-		catch (const exception &err) {
+		catch (const std::exception &err) {
 			spdlog::error(err.what());
 			return defaults;
 		}

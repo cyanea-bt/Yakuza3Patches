@@ -5,7 +5,6 @@
 
 
 namespace utils {
-	using namespace std;
 	using namespace std::chrono;
 
 	static const auto tz = current_zone();
@@ -81,14 +80,14 @@ namespace utils {
 	string_view ltrim(string_view str)
 	{
 		const auto pos(str.find_first_not_of(" \t\n\r\f\v"));
-		str.remove_prefix(min(pos, str.length()));
+		str.remove_prefix(std::min(pos, str.length()));
 		return str;
 	}
 
 	string_view rtrim(string_view str)
 	{
 		const auto pos(str.find_last_not_of(" \t\n\r\f\v"));
-		str.remove_suffix(min(str.length() - pos - 1, str.length()));
+		str.remove_suffix(std::min(str.length() - pos - 1, str.length()));
 		return str;
 	}
 
@@ -102,7 +101,7 @@ namespace utils {
 
 	// ref: https://en.cppreference.com/w/cpp/string/byte/toupper
 	string uppercase(string_view str) {
-		stringstream ss;
+		std::stringstream ss;
 		for (const unsigned char &c : str) {
 			ss << static_cast<char>(std::toupper(c));
 		}
@@ -110,7 +109,7 @@ namespace utils {
 	}
 
 	string lowercase(string_view str) {
-		stringstream ss;
+		std::stringstream ss;
 		for (const unsigned char &c : str) {
 			ss << static_cast<char>(std::tolower(c));
 		}

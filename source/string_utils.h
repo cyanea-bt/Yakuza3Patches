@@ -3,20 +3,23 @@
 
 
 namespace utils {
-	std::string UTCString();
-	std::string UTCString_ms();
-	std::string TzString();
-	std::string TzString_ms();
-	std::string UTCFilename();
-	std::string UTCFilename_ms();
-	std::string TzFilename();
-	std::string TzFilename_ms();
+	using std::string;
+	using std::string_view;
 
-	std::string replaceAll(const std::string &str, const std::string &from, const std::string &to);
-	void replaceAllByRef(std::string &str, const std::string &from, const std::string &to);
-	std::string_view ltrim(std::string_view str);
-	std::string_view rtrim(std::string_view str);
-	std::string_view trim(std::string_view str);
-	std::string lowercase(std::string_view str);
-	std::string uppercase(std::string_view str);
+	string UTCString();
+	string UTCString_ms();
+	string TzString();
+	string TzString_ms();
+	string UTCFilename();
+	string UTCFilename_ms();
+	string TzFilename();
+	string TzFilename_ms();
+
+	string replaceAll(const string &str, const string &from, const string &to);
+	void replaceAllByRef(string &str, const string &from, const string &to);
+	string_view ltrim(string_view str);
+	string_view rtrim(string_view str);
+	string_view trim(string_view str);
+	string lowercase(string_view str);
+	string uppercase(string_view str);
 }

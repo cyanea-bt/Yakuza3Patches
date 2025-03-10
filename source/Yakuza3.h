@@ -9,6 +9,8 @@
 inline config::Config CONFIG;
 
 namespace Yakuza3 {
+	using std::string_view;
+
 	bool Init();
-	void Finalize(std::string_view finalMsg);
+	void Finalize(string_view finalMsg);
 }

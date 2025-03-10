@@ -3,7 +3,7 @@
 
 
 namespace config {
-	using namespace std;
+	using std::string;
 	using json = nlohmann::ordered_json;
 
 	struct Config {

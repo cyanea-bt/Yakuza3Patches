@@ -7,12 +7,9 @@
 
 
 namespace EasySpam {
-	using namespace std;
-
 	typedef uint8_t (*GetEnemyThrowResistanceType)(uintptr_t);
-	static GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
-
 	typedef uint8_t (*AddSubtractHeatType)(uintptr_t, int32_t);
+	static GetEnemyThrowResistanceType enemyThrowResFunc = nullptr;
 	static AddSubtractHeatType addHeatFunc = nullptr;
 
 	// param1 here is the address of the player actor object
@@ -116,11 +113,10 @@ namespace EasySpam {
 
 void OnInitializeHook()
 {
-	using namespace std;
 	using namespace Memory;
 	using namespace hook;
 
-	unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
+	std::unique_ptr<ScopedUnprotect::Unprotect> Protect = ScopedUnprotect::UnprotectSectionOrFullModule(GetModuleHandle(nullptr), ".text");
 
 	// Check if patch should be disabled
 	if (!Yakuza3::Init()) {

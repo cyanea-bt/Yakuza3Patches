@@ -7,7 +7,7 @@
 
 
 namespace HeatFix {
-	using namespace std;
+	using std::string;
 	static uint8_t drainTimeLimiter = 1;
 	static uint16_t lastDrainTimer = 0, substituteTimer = 0;
 
