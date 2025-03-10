@@ -1,1 +1,0 @@
-xcopy /V /F /Y "$(TargetPath)" "C:\Games\Yakuza 3\mods\$(ProjectName)\"

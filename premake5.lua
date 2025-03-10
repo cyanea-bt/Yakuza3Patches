@@ -10,7 +10,7 @@ project "Yakuza3HeatFix"
 	    "rsc_FullName=\"Yakuza3HeatFix\"",
 	    "rsc_MajorVersion=2025",
 	    "rsc_MinorVersion=3",
-	    "rsc_RevisionID=9",
+	    "rsc_RevisionID=10",
 	    "rsc_BuildID=0",
 	}
 

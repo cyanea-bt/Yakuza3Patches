@@ -37,7 +37,7 @@ Other versions might work as well, YMMV.
 `6c688b51650fa2e9be39e1d934e872602ee54799` `Yakuza3.exe (GOG)`  
   
 ## Configuration
-Patch versions `2025.03.09` or later have support for some user-configurable settings. I obviously recommend  
+Patch versions `2025.03.10` or later have support for some user-configurable settings. I obviously recommend  
 sticking with the defaults but the option's there if you want it. After running the game for the first time with my  
 patch installed/enabled, 2 files will be generated in the patch's directory (`mods\Yakuza3HeatFix`).  
   
@@ -81,5 +81,5 @@ git clone --recursive https://github.com/cyanea-bt/Yakuza3Patches.git
 cd Yakuza3Patches
 premake5 vs2019
 cd build
-msbuild Yakuza3Patches.sln /t:Yakuza3HeatFix;Rebuild /m /p:Configuration=Release;Platform=Win64
+msbuild Yakuza3Patches.sln /t:Yakuza3HeatFix:Rebuild /m /p:"Configuration=Release;Platform=Win64"
 ```

@@ -1,7 +1,7 @@
 Category:           Gameplay
 Mod name:           Yakuza 3 HeatFix
 Mod language:       English
-Current version:    2025.03.09
+Current version:    2025.03.10
 Author:             cyaneaBt
 
 Brief overview:
