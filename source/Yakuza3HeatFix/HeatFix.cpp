@@ -39,7 +39,7 @@ namespace HeatFix {
 
 			DebugBreak();
 			utils::Log("");
-			winutils::showErrorMessage("AddSubtractHeatWrapper"); // In case I don't have a debugger attached
+			winutils::ShowErrorMessage("AddSubtractHeatWrapper"); // In case I don't have a debugger attached
 		}
 
 		return result;

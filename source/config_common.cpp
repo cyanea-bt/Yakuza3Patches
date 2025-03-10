@@ -72,7 +72,7 @@ namespace config {
 	}
 
 	static void exportDescriptions(const fs::path descPath) {
-		json j = json::parse(winutils::getOptionDescriptions());
+		json j = json::parse(winutils::GetOptionDescriptions());
 		ofstream ofs = ofstream(descPath, ios::out | ios::binary | ios::trunc);
 		
 		string info = j["info"];

@@ -12,6 +12,7 @@
 #endif
 #define FMT_HEADER_ONLY
 #define SPDLOG_HEADER_ONLY
+#define SPDLOG_FMT_EXTERNAL_HO
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 #include <fmt/compile.h>
