@@ -1,6 +1,7 @@
-﻿#include "utils.h"
-#include "Yakuza3.h"
+﻿#include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
+#include "utils.h"
+#include "fmtlib_headers.h"
 
 
 void OnInitializeHook()

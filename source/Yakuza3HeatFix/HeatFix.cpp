@@ -1,6 +1,9 @@
-#include "utils.h"
 #include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
+#include "utils.h"
+#include "win_utils.h"
+#include "fmtlib_headers.h"
+#include "spdlog_headers.h"
 
 
 namespace HeatFix {

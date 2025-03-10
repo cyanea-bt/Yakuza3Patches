@@ -1,9 +1,9 @@
 ﻿//
 // WIP patch, not ready for release.
 //
-
 #include "utils.h"
 #include "Yakuza3.h"
+#include "fmtlib_headers.h"
 
 
 namespace EasySpam {

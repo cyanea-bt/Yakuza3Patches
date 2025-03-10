@@ -1,9 +1,9 @@
 //
 // Nothing to see here yet. Still in research stage.
 //
-
 #include "utils.h"
 #include "Yakuza3.h"
+#include "fmtlib_headers.h"
 
 
 namespace EnemyAIFix {

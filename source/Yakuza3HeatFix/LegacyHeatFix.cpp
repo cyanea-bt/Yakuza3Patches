@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "Yakuza3.h"
 #include "Yakuza3HeatFix.h"
+#include "fmtlib_headers.h"
 
 
 namespace LegacyHeatFix {

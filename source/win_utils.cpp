@@ -2,7 +2,8 @@
 #include <windows.h>
 #include "resources/resource.h"
 #include "win_utils.h"
-#include "utils.h"
+#include "fmtlib_headers.h"
+#include "spdlog_headers.h"
 
 
 namespace winutils {

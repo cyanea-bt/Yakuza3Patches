@@ -1,5 +1,8 @@
-#include "utils.h"
 #include "Yakuza3.h"
+#include "utils.h"
+#include "string_utils.h"
+#include "fmtlib_headers.h"
+#include "spdlog_headers.h"
 
 
 namespace Yakuza3 {
