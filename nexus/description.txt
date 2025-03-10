@@ -12,7 +12,7 @@ So whenever something was supposed to happen once per frame at 30 times a second
 that it is messed up in Y3R. That is why Heat drain starts after about half the time it takes on PS3 and also why the drain rate
 is twice of what it is on PS3.
 
-In order to return to PS3-like behavior, the newest version of my patch fixes all instances where the new frame rate impacted
+In order to return to PS3-like behavior, the newest version of my patch fixes all instances where the higher frame rate impacted
 the game's Heat calculations. This turned out to be lot more work than I had anticipated but I am pretty happy with the results.
 
 [b][size=5]Compatibility:[/size][/b]
@@ -26,12 +26,13 @@ I only tested this patch on the [url=https://steamdb.info/patchnotes/6407476/]mo
 Mod is compatible with [url=https://github.com/SRMM-Studio/ShinRyuModManager]ShinRyuModManager[/url], so simply download and install like all other SRMM mods.
 [b]If you are still running a version from before SRMM support was added, please delete that old version's files before using this new one.[/b]
 
-If you don't want to use [url=https://github.com/SRMM-Studio/ShinRyuModManager]ShinRyuModManager[/url], you can also opt to use any other ASI Loader instead (like the one included with [url=https://github.com/CookiePLMonster/SilentPatchYRC]SilentPatchYRC[/url]). In that case you should extract [b]Yakuza3HeatFix.asi[/b] to the same directory as [b]Yakuza3.exe AND dinput8.dll[/b]
+If you don't want to use [url=https://github.com/SRMM-Studio/ShinRyuModManager]ShinRyuModManager[/url], you can also opt to use any other ASI Loader instead (like the one included with [url=https://github.com/CookiePLMonster/SilentPatchYRC]SilentPatchYRC[/url]).
+In that case you should extract [b]Yakuza3HeatFix.asi[/b] to the same directory as [b]Yakuza3.exe AND dinput8.dll[/b].
 
 [size=3][b]Verify that the patch is working as intended (optional):[/b][/size]
 1. Start the game after installing/enabling the mod.
 2. After you get to the main menu, there should now be a [b]Yakuza3HeatFix.txt[/b] next to [b]Yakuza3.exe[/b].
-3. Open this text file and verify that the first 5 lines read:
+3. Open this text file and verify that the first 9 lines read:
 
 [quote]
 Found pattern: HeatDrainTimer

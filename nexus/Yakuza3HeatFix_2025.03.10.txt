@@ -1,2 +1,2 @@
-Complete rewrite of my patch. Fixes several instances where Heat gain/loss was supposed to happen but didn't.
-Overall feels much better to play now and is a lot more accurate to how things work on PS3.
+Complete rewrite of my patch. Fixes instances where Heat gain/loss was supposed to happen but didn't.
+Overall feels much better to play now and is a whole lot more accurate to how things work on PS3.

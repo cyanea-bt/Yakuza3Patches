@@ -5,4 +5,4 @@ Current version:    2025.03.10
 Author:             cyaneaBt
 
 Brief overview:
-Patch that fixes a multitude of Heat related issues (e.g. draining too early/too fast) in Yakuza 3 Remastered.
+Patch that fixes a multitude of Heat related issues (e.g. Heat draining too early/too fast, Heat gain/drain not matching the PS3 version) in Yakuza 3 Remastered.

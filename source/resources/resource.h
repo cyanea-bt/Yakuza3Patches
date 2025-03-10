@@ -15,7 +15,7 @@
 #define rsc_Extension       ".ext"
 #define rsc_Copyright       "2999 cyanea-bt"
 #define rsc_UpdateURL       "github.com/user/repository/releases"
-#define rsc_FILE_1			"resource.h"
+#define rsc_FILE_1          "resource.h"
 #endif
 
 //{{NO_DEPENDENCIES}}

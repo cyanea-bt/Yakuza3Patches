@@ -1,0 +1,104 @@
+As I had suspected - all of these match exactly between Y3 PS3 and Y3R.
+I see no reason to test further. Also - testing all the different weapon types would be kinda painful.
+
+----------
+
+Y3R Heat gain:
+1xLH -> 50
+1xHH -> 150 (no lock on) / 60 (with lock on)
+1xLH + 1xHH combo -> 450
+
+2xLH -> 150
+1xLH (only 2nd hit of a chain) -> 100
+1xHH (only 3rd hit of a chain) -> 800
+2xLH + 1xHH full combo -> 950
+
+3xLH -> 360
+1xLH (only 3rd hit of a chain) -> 210
+1xHH (only 4th hit of a chain) -> 1400
+3xLH + 1xHH full combo -> 1760
+
+4xLH (slow) -> 560
+4xLH (fast) -> 880
+1xLH (only 4th hit of a chain) -> 200
+1xHH (only 5th hit of a chain) -> 1100
+4xLH + 1xHH full combo -> 1660 (slow) / 1980 (fast)
+
+Grab + LH -> 200
+Grab + HH -> 480
+Grab + Throw -> 1000
+Stomp on downed enemy -> 720
+Running jump kick -> 250
+Charged heavy kick -> 600
+
+
+1xLH with bottle (1st hit of a chain) -> 10
+1xLH with bottle (2nd hit of a chain) -> 200
+1xHH with bottle -> 200
+Throw bottle -> 100
+
+1xLH with flag pole (1st hit of a chain) -> 500
+1xHH with flag pole -> 600
+
+1xLH with trash can (1st hit of a chain) -> 250
+1xHH with trash can -> 740
+1xcharged HH with trash can -> 1240
+Throw trash can -> 120
+
+1xLH with bicycle/broken bicycle -> 1400
+1xHH with bicycle/broken bicycle -> 1040
+Throw bicycle -> 170
+
+1xLH with bicycle wheel (1st/2nd hit of a chain) -> 250
+1xHH with bicycle wheel -> 740
+Throw bicycle wheel -> 120
+
+----------
+
+Y3 PS3 Heat gain:
+1xLH -> 50
+1xHH -> 150 (no lock on) / 60 (with lock on)
+1xLH + 1xHH combo -> 450
+
+2xLH -> 150
+1xLH (only 2nd hit of a chain) -> 100
+1xHH (only 3rd hit of a chain) -> 800
+
+3xLH -> 360
+1xLH (only 3rd hit of a chain) -> 210
+1xHH (only 4th hit of a chain) -> 1400
+
+4xLH (slow) -> 560
+4xLH (fast) -> 880
+1xLH (only 4th hit of a chain) -> 200
+1xHH (only 5th hit of a chain) -> 1100
+4xLH + 1xHH full combo -> 1660 (slow) / 1980 (fast)
+
+Grab + LH -> 200
+Grab + HH -> 480
+Grab + Throw -> 1000
+Stomp on downed enemy -> 720
+Running jump kick -> 250
+Charged heavy kick -> 600
+
+
+1xLH with bottle (1st hit of a chain) -> 10
+1xLH with bottle (2nd hit of a chain) -> 200
+1xHH with bottle -> 200
+Throw bottle -> 100
+
+1xLH with flag pole (1st hit of a chain) -> 500
+1xHH with flag pole -> 600
+
+1xLH with trash can (1st hit of a chain) -> 250
+1xHH with trash can -> 740
+1xcharged HH with trash can -> 1240
+Throw trash can -> 120
+
+1xLH with bicycle/broken bicycle -> 1400
+1xHH with bicycle/broken bicycle -> 1040
+Throw bicycle -> 170
+
+1xLH with bicycle wheel (1st/2nd hit of a chain) -> 250
+1xHH with bicycle wheel -> 740
+Throw bicycle wheel -> 120
